@@ -1,0 +1,93 @@
+GRUPO BAHIA IMÓVEIS — SITE V11 + PAINEL ADMINISTRATIVO
+=====================================================
+
+ARQUIVOS (publicar todos, mantendo a pasta assets)
+  index.html            -> o site (uma página só; as guias trocam o conteúdo sem mudar o link)
+  admin.html            -> painel administrativo (link "Área restrita" no rodapé do site)
+  assets/config.js      -> CONFIGURAÇÃO: WhatsApp e endereço do servidor
+  assets/site.js        -> funcionamento do site
+  assets/admin.js       -> funcionamento do painel
+  assets/style.css, assets/admin.css, assets/logo-grupo-bahia.png
+  integracao-whatsapp/Codigo.gs  -> NÃO publicar no site. É o servidor, vai para o Google.
+Faça backup da versão anterior antes de publicar.
+
+COMO O SITE FUNCIONA
+  - Guias no topo: Início, Imóveis, Categorias, Como funciona, A empresa, Dúvidas, Contato.
+  - Clicar numa categoria (ex.: Fazenda) ou em Buscar mostra na hora o que está à venda.
+  - Cada imóvel abre uma página com galeria de fotos/vídeos, descrição, quadro
+    "Gostou deste imóvel?", localização com distâncias, "Agende sua visita" e imóveis similares.
+  - O chat (botão verde) exige nome e WhatsApp para enviar.
+
+------------------------------------------------------------
+LIGAR O PAINEL E O CHAT (uma vez só, ~15 minutos, gratuito)
+------------------------------------------------------------
+Sem esta etapa o painel abre em MODO DEMONSTRAÇÃO: dá para testar tudo, mas o que
+for feito fica só no navegador de quem testou e não aparece para os visitantes.
+
+Por que no Google? O site é estático: qualquer pessoa consegue ver o código dele.
+Por isso senhas, usuários, publicações e arquivos ficam no Google (planilha + Drive),
+onde ninguém de fora enxerga. As senhas são guardadas criptografadas.
+
+Passo 1 — Planilha e código
+  1. Com a conta Google da empresa, crie uma Planilha Google: "Site Grupo Bahia Imóveis".
+  2. Menu Extensões > Apps Script. Apague o que estiver lá e cole todo o arquivo
+     integracao-whatsapp/Codigo.gs. Salve.
+
+Passo 2 — Senha do dono (Igor Ribeiro)
+  1. No Apps Script: engrenagem (Configurações do projeto) > Propriedades do script.
+  2. Adicione:  SENHA_INICIAL_DONO  = (a senha combinada para o Igor)
+     Opcional, para os avisos do chat no WhatsApp (veja Passo 5):
+                WHATSAPP_NUMERO     = 5571996020606
+                CALLMEBOT_APIKEY    = (chave do CallMeBot)
+                EMAIL_AVISO         = (e-mail para receber cópia dos contatos)
+  3. Volte ao editor, escolha a função "configurarDono" e clique em Executar.
+     Autorize o acesso quando o Google pedir.
+     -> Isso cria as abas (Usuarios, Posts, Log, Contatos) e a conta do dono:
+        usuário: igor   |   senha: a que você colocou em SENHA_INICIAL_DONO
+     -> Por segurança, a propriedade SENHA_INICIAL_DONO é apagada automaticamente.
+
+Passo 3 — Publicar o servidor
+  1. Botão Implantar > Nova implantação > tipo "App da Web".
+     Executar como: Eu      |      Quem pode acessar: Qualquer pessoa
+  2. Copie o endereço que termina em /exec.
+  (Quando alterar o código no futuro: Implantar > Gerenciar implantações > editar >
+   Nova versão. Assim o endereço continua o mesmo.)
+
+Passo 4 — Ligar no site
+  Abra assets/config.js e cole o endereço:   endpoint: 'https://script.google.com/macros/s/..../exec'
+  Publique o site de novo. Pronto:
+    - admin.html passa a pedir usuário e senha de verdade;
+    - as publicações feitas no painel aparecem na guia Imóveis;
+    - o chat envia as mensagens sem tirar o visitante do site.
+
+Passo 5 (opcional) — Avisos do chat no WhatsApp da empresa
+  Em callmebot.com (seção WhatsApp API), siga as instruções para ativar o número
+  (71) 99602-0606 e receber a "apikey". Coloque-a em CALLMEBOT_APIKEY (Passo 2).
+  Mesmo sem isso, todas as mensagens ficam salvas na aba "Contatos" da planilha,
+  com o link para chamar o cliente no WhatsApp.
+
+------------------------------------------------------------
+USANDO O PAINEL
+------------------------------------------------------------
+  - Publicações: criar, editar, duplicar, publicar/ocultar, destacar, reordenar, excluir.
+  - Tipos de publicação: Imóvel à venda, Lançamento/loteamento, Divulgação (novidade, promoção, aviso).
+  - Situação: Disponível, Reservado ou Vendido (aparece como selo; vendidos vão para o fim da vitrine).
+  - Formato na vitrine: Padrão (meia largura) ou Largo (linha inteira, ideal para o carro-chefe).
+  - Destacar: aparece primeiro na vitrine e na seção "Imóveis em destaque" da página inicial.
+  - Ficha técnica: itens rápidos (Área total, Água, Energia, Acesso, Documentação...) com sugestões prontas.
+  - Etiqueta: selo curto no cartão (ex.: "Parcelamento facilitado").
+  - Localização: texto opcional, distâncias (cidade, km e direção: Norte, Sul, Leste...) e
+    endereço/coordenadas. O site monta um esquema em radar com o imóvel no centro, a lista
+    de distâncias com barras e, havendo endereço, a guia "Mapa" e o botão "Como chegar".
+  - Fotos são otimizadas automaticamente. Vídeos até 35 MB vão direto; vídeos maiores:
+    publique no YouTube e cole o link (Instagram e TikTok também aceitos como link).
+  - Arquivos ficam na pasta "Grupo Bahia Imóveis - Mídias do site" no Google Drive.
+  - Usuários e acessos (só o dono): autorizar ou recusar pedidos, criar usuário,
+    bloquear, reativar, trocar permissão (Dono/Editor), definir nova senha, excluir.
+    A conta do Igor Ribeiro é protegida: ninguém consegue bloqueá-la ou excluí-la.
+  - Pedido de acesso: a pessoa clica em "Solicitar acesso" no login, escolhe usuário
+    e senha, e só entra depois que o Igor autorizar.
+  - Registro de atividades (só o dono): quem fez o quê e quando.
+  - Segurança: 5 senhas erradas seguidas bloqueiam aquele usuário por 15 minutos;
+    a sessão expira após 6 horas.
+  - Recomendação: depois do primeiro acesso, troque a senha em "Minha conta".
