@@ -847,5 +847,52 @@ button.restrito.loading svg{animation:gira .8s linear infinite}
 .cnpj small{display:block;font-size:10.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:1px}
 .vis-cnpj{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line2);font-size:12px;color:var(--muted)}
 .vis-cnpj svg{width:14px;height:14px;color:var(--gold)}
+/* V20: faixa de aviso e ordenação */
+.faixa{display:inline-flex;align-items:center;gap:10px;margin-bottom:18px;padding:8px 8px 8px 14px;border-radius:99px;background:#d9ad5f26;border:1px solid #d9ad5f66;color:#fff;font-size:14px;font-weight:600;backdrop-filter:blur(6px);max-width:100%}
+.faixa i{width:8px;height:8px;border-radius:50%;background:var(--gold2);flex:none;box-shadow:0 0 0 4px #f1d08f33}
+.faixa span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.faixa b{flex:none;padding:5px 12px;border-radius:99px;background:var(--gold);color:#1a1206;font-size:12.5px}
+.faixa:hover{border-color:var(--gold2)}
+.faixa[hidden]{display:none}
+.vbar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+.vbar .toolbar{margin:0}
+.ordem{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;color:var(--muted);margin-left:auto}
+.ordem select{height:40px;padding:0 34px 0 14px;border-radius:99px;background:#1e2227;border:1px solid var(--line2);color:var(--text);font:600 14px var(--sans);appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%23d9ad5f' stroke-width='2'%3E%3Cpath d='m1 1 5 5 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;cursor:pointer}
+.ordem select:focus{outline:none;border-color:var(--gold)}
+@media(max-width:620px){.faixa span{white-space:normal}.ordem{margin-left:0}}
+/* ===== V20: experiência do visitante ===== */
+.tab:not([hidden]){animation:abaEntra .55s cubic-bezier(.2,.7,.2,1)}
+@keyframes abaEntra{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.pcard{transition:transform .35s cubic-bezier(.2,.7,.2,1),box-shadow .35s;will-change:transform}
+.pcard::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;opacity:0;transition:opacity .35s;background:radial-gradient(420px circle at var(--mx,50%) var(--my,50%),#ffffff1f,transparent 45%)}
+.pcard:hover::before{opacity:1}
+.pcard:hover{box-shadow:0 30px 60px -28px #000}
+.fav{position:absolute;z-index:3;right:18px;bottom:auto;top:18px;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;border:1px solid #ffffff4d;background:#0000004d;color:#fff;backdrop-filter:blur(6px);cursor:pointer;transition:background .2s,color .2s,transform .2s}
+.fav svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2}
+.fav svg path{fill:transparent;stroke:currentColor;stroke-width:1.8}
+.fav:hover{background:#00000080;transform:scale(1.08)}
+.fav.on,.fav2.on{color:#ff4d6d}
+.fav.on svg path,.fav2.on svg path{fill:currentColor}
+.fav.pop,.fav2.pop{animation:pop .45s}
+@keyframes pop{30%{transform:scale(1.35)}60%{transform:scale(.9)}}
+.pcard .sit,.pcard .play{right:72px}
+.fav2 svg path{fill:transparent;stroke:currentColor;stroke-width:1.8}
+.chip-fav{display:inline-flex;align-items:center;gap:7px}
+.chip-fav svg{width:14px;height:14px;color:#ff4d6d}
+.chip-fav b{font-size:12px;opacity:.8}
+.chip-fav.on svg{color:#1a1206}
+.vistos{padding:70px 0 10px}
+#toast2{position:fixed;left:50%;bottom:28px;z-index:90;transform:translate(-50%,20px);opacity:0;pointer-events:none;padding:12px 20px;border-radius:99px;background:#2b3036f2;border:1px solid #d9ad5f66;color:var(--text);font-weight:600;font-size:14px;box-shadow:0 14px 30px -10px #000;transition:opacity .3s,transform .3s}
+#toast2.show{opacity:1;transform:translate(-50%,0)}
+.progresso{position:fixed;left:0;right:0;top:0;height:3px;z-index:70;pointer-events:none}
+.progresso i{display:block;height:100%;background:linear-gradient(90deg,var(--gold3),var(--gold2));transform-origin:left;transform:scaleX(0)}
+.topo-btn{position:fixed;left:22px;bottom:22px;z-index:59;width:46px;height:46px;border-radius:50%;border:1px solid var(--line2);background:#2b3036e6;color:var(--gold2);font-size:20px;cursor:pointer;opacity:0;transform:translateY(12px);pointer-events:none;transition:.3s;backdrop-filter:blur(6px)}
+.topo-btn.show{opacity:1;transform:none;pointer-events:auto}
+.topo-btn:hover{border-color:var(--gold)}
+@media(max-width:620px){.topo-btn{left:16px;bottom:16px;width:42px;height:42px}.fav{width:38px;height:38px;right:14px;top:14px}.pcard .sit,.pcard .play{right:62px}body:has(.tab[data-aba="detalhe"]:not([hidden])) .topo-btn{bottom:86px}}
+@media (prefers-reduced-motion:reduce){.tab:not([hidden]){animation:none}}
+.fav svg,.fav2 svg,.chip-fav svg{fill:none;stroke:currentColor;stroke-width:1.9}
+.fav.on svg,.fav2.on svg,.chip-fav svg{fill:currentColor}
+.voltar2{z-index:5}.ph2.sem .ph2-in{padding-top:180px}@media(max-width:620px){.ph2.sem .ph2-in{padding-top:150px}}
 
 @media(max-width:620px){.menu{top:84px}}

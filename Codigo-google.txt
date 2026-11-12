@@ -17,7 +17,8 @@
 
 const DONO = { usuario: 'igor', nome: 'Igor Ribeiro' };
 const SESSAO_SEG = 6 * 60 * 60;          // 6 horas
-const MAX_TENTATIVAS = 5;                 // tentativas de login antes de bloquear por 15 min
+const MAX_TENTATIVAS = 5;
+const ITERACOES = 1500;                 // não altere: senhas já salvas dependem deste número                 // tentativas de login antes de bloquear por 15 min
 const TIPOS_MIDIA = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/quicktime', 'video/webm'];
 
 const ABAS = {
@@ -31,7 +32,7 @@ const ABAS = {
 
 function doGet(e) {
   const acao = (e && e.parameter && e.parameter.acao) || 'posts';
-  if (acao === 'posts') return json({ ok: true, posts: postsPublicos() });
+  if (acao === 'posts') return json({ ok: true, posts: postsPublicos(), config: lerConfig() });
   return json({ ok: true, servico: 'Grupo Bahia Imóveis' });
 }
 
@@ -41,14 +42,14 @@ function doPost(e) {
   try {
     preparar();
     const acao = d.acao || 'contato';
-    const publicas = { contato, posts: () => ({ posts: postsPublicos() }), login, solicitarAcesso };
+    const publicas = { contato, posts: () => ({ posts: postsPublicos(), config: lerConfig() }), login, solicitarAcesso };
     if (publicas[acao]) return json(Object.assign({ ok: true }, publicas[acao](d) || {}));
 
     const eu = usuarioDaSessao(d.token);
     if (!eu) return json({ ok: false, erro: 'Sessão expirada. Entre novamente.', sair: true });
 
-    const logadas = { me, logout, painel, postsAdmin, salvarPost, excluirPost, statusPost, moverPost, enviarMidia, trocarSenha };
-    const doDono = { usuarios, criarUsuario, aprovarUsuario, bloquearUsuario, excluirUsuario, redefinirSenha, alterarPapel, registro };
+    const logadas = { me, logout, painel, postsAdmin, salvarPost, excluirPost, statusPost, moverPost, enviarMidia, trocarSenha, configAdm: () => ({ config: lerConfig() }) };
+    const doDono = { usuarios, criarUsuario, aprovarUsuario, bloquearUsuario, excluirUsuario, redefinirSenha, alterarPapel, registro, salvarConfig, contatos };
     if (logadas[acao]) return json(Object.assign({ ok: true }, logadas[acao](d, eu) || {}));
     if (doDono[acao]) {
       if (eu.papel !== 'dono') throw new Error('Somente o dono pode fazer isso.');
@@ -66,6 +67,8 @@ function contato(d) {
   const nome = limpar(d.nome, 60), tel = limpar(d.telefone, 20), msg = limpar(d.mensagem, 800), pagina = limpar(d.pagina, 40);
   const dig = tel.replace(/\D/g, '');
   if (nome.length < 2 || (dig.length !== 10 && dig.length !== 11) || msg.length < 2) throw new Error('Dados inválidos.');
+  limitar('ct_' + dig, 5, 600, 'Muitas mensagens deste número. Tente novamente em alguns minutos.');
+  limitar('ct_total', 60, 600, 'Muitas mensagens no momento. Tente novamente em alguns minutos.');
   const responder = 'https://wa.me/55' + dig;
   aba('Contatos').appendRow([agora(), nome, tel, msg, pagina, responder].map(seguro));
   const texto = '🏡 *Novo contato pelo site*\n*Nome:* ' + nome + '\n*WhatsApp:* ' + tel + '\n*Página:* ' + pagina + '\n\n' + msg + '\n\nResponder: ' + responder;
@@ -87,19 +90,21 @@ function login(d) {
   const u = linhas('Usuarios').find(x => x.usuario === usuario);
   if (!u || hash(senha, u.salt) !== u.hash) {
     cache.put(chave, String(falhas + 1), 900);
+    if (falhas + 1 >= MAX_TENTATIVAS) log(usuario || '?', 'login bloqueado por tentativas', '');
     throw new Error('Usuário ou senha incorretos.');
   }
   if (u.status === 'pendente') throw new Error('Seu acesso ainda não foi autorizado pelo dono.');
   if (u.status !== 'ativo') throw new Error('Seu acesso está bloqueado.');
   cache.remove(chave);
   const token = Utilities.getUuid() + Utilities.getUuid();
-  cache.put('s_' + token, u.id, SESSAO_SEG);
+  cache.put('s_' + token, u.id + '|' + u.salt.slice(0, 12), SESSAO_SEG);
   atualizar('Usuarios', u.id, { ultimoAcesso: agora() });
   log(u.usuario, 'login', '');
   return { token, usuario: publicoUsuario(u) };
 }
 
 function solicitarAcesso(d) {
+  limitar('sol_total', 10, 3600, 'Muitos pedidos de acesso. Tente mais tarde.');
   const nome = limpar(d.nome, 60), usuario = limpar(d.usuario, 40).toLowerCase(), senha = String(d.senha || '');
   validarNovoUsuario(nome, usuario, senha);
   novoUsuario(nome, usuario, senha, 'editor', 'pendente');
@@ -226,12 +231,38 @@ function moverPost(d, eu) {
 
 function enviarMidia(d, eu) {
   const mime = String(d.mime || ''); if (TIPOS_MIDIA.indexOf(mime) < 0) throw new Error('Formato não aceito: ' + mime);
-  const blob = Utilities.newBlob(Utilities.base64Decode(String(d.base64 || '')), mime, limpar(d.nome, 100) || 'arquivo');
+  const b64 = String(d.base64 || ''); if (b64.length > 48 * 1024 * 1024) throw new Error('Arquivo grande demais (máx. 35 MB).');
+  limitar('up_' + eu.id, 60, 600, 'Muitos envios seguidos. Aguarde alguns minutos.');
+  const blob = Utilities.newBlob(Utilities.base64Decode(b64), mime, limpar(d.nome, 100).replace(/[^\w.\- ]/g, '') || 'arquivo');
   const arq = pasta().createFile(blob);
   arq.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   const id = arq.getId(), video = mime.indexOf('video') === 0;
   log(eu.usuario, 'enviou arquivo', arq.getName());
   return { midia: { tipo: video ? 'video' : 'imagem', id, url: video ? 'https://drive.google.com/file/d/' + id + '/preview' : 'https://drive.google.com/thumbnail?id=' + id + '&sz=w1600' } };
+}
+
+/* ================= CONFIGURAÇÕES DO SITE (só o dono) ================= */
+
+const CFG_TEXTOS = { whatsapp: 15, whatsappExibir: 30, cnpj: 25, email: 80, instagram: 200, heroEyebrow: 60, heroTitulo1: 60,
+  heroTitulo2: 60, heroTexto: 300, faixaTexto: 140, sobreTexto: 800 };
+function lerConfig() {
+  try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('SITE_CONFIG') || '{}'); } catch (_) { return {}; }
+}
+function salvarConfig(d, eu) {
+  const c = d.config || {}, out = {};
+  Object.keys(CFG_TEXTOS).forEach(k => { if (c[k] != null) out[k] = limpar(c[k], CFG_TEXTOS[k]); });
+  if (out.whatsapp) out.whatsapp = out.whatsapp.replace(/\D/g, '');
+  if (out.instagram && !/^https:\/\//.test(out.instagram)) out.instagram = '';
+  out.faixaAtiva = !!c.faixaAtiva; out.videoAtivo = c.videoAtivo !== false;
+  out.segundosPorClipe = Math.min(30, Math.max(4, Number(c.segundosPorClipe) || 7));
+  out.capa = (Array.isArray(c.capa) ? c.capa : []).slice(0, 10)
+    .map(x => ({ tema: limpar(x.tema, 40), src: limpar(x.src, 500) })).filter(x => /^https:\/\//.test(x.src));
+  PropertiesService.getScriptProperties().setProperty('SITE_CONFIG', JSON.stringify(out));
+  log(eu.usuario, 'alterou configurações do site', '');
+}
+function contatos() {
+  return { contatos: linhas('Contatos').slice(-500).reverse().map(c => ({ data: c['Data'], nome: c['Nome'], tel: c['WhatsApp'],
+    msg: c['Mensagem'], pagina: c['Página'], link: c['Chamar no WhatsApp'] })) };
 }
 
 /* ================= AUXILIARES ================= */
@@ -254,9 +285,11 @@ function preparar() {
 function configurarDono() { preparar(); }
 
 function usuarioDaSessao(token) {
-  if (!token) return null;
-  const id = CacheService.getScriptCache().get('s_' + token); if (!id) return null;
+  if (typeof token !== 'string' || !/^[0-9a-f-]{72}$/i.test(token)) return null;
+  const v = CacheService.getScriptCache().get('s_' + token); if (!v) return null;
+  const [id, sel] = v.split('|');
   const u = linhas('Usuarios').find(x => x.id === id);
+  if (u && sel && u.salt.slice(0, 12) !== sel) return null; // senha trocada: sessão antiga encerrada
   return u && u.status === 'ativo' ? u : null;
 }
 function novoUsuario(nome, usuario, senha, papel, status) {
@@ -273,11 +306,11 @@ function validarNovoUsuario(nome, usuario, senha) {
   validarSenha(senha);
 }
 function validarSenha(s) {
-  if (s.length < 8 || !/[A-Za-z]/.test(s) || !/\d/.test(s)) throw new Error('A senha precisa de 8+ caracteres, com letras e números.');
+  if (s.length < 10 || !/[a-z]/.test(s) || !/[A-Z]/.test(s) || !/\d/.test(s)) throw new Error('A senha precisa de 10+ caracteres, com letra maiúscula, minúscula e número.');
 }
 function hash(senha, salt) {
   let h = salt + '|' + senha;
-  for (let i = 0; i < 1500; i++) h = Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, h + salt, Utilities.Charset.UTF_8));
+  for (let i = 0; i < ITERACOES; i++) h = Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, h + salt, Utilities.Charset.UTF_8));
   return h;
 }
 function publicoUsuario(u) { return { id: u.id, usuario: u.usuario, nome: u.nome, papel: u.papel, status: u.status, criado: u.criado, ultimoAcesso: u.ultimoAcesso, protegido: u.usuario === DONO.usuario }; }
@@ -306,5 +339,10 @@ function atualizar(n, id, mud) {
 function apagarLinha(n, id) { const l = linhas(n).find(x => x.id === id); if (l) aba(n).deleteRow(l._linha); }
 function log(usuario, acao, detalhe) { aba('Log').appendRow([agora(), usuario, acao, limpar(detalhe, 300)].map(seguro)); }
 function agora() { return Utilities.formatDate(new Date(), 'America/Bahia', 'dd/MM/yyyy HH:mm'); }
+function limitar(chave, max, seg, msg) {
+  const c = CacheService.getScriptCache(), n = Number(c.get('rl_' + chave) || 0);
+  if (n >= max) throw new Error(msg);
+  c.put('rl_' + chave, String(n + 1), seg);
+}
 function limpar(v, max) { return String(v == null ? '' : v).replace(/[\u0000-\u0008\u000B-\u001F]/g, '').trim().slice(0, max); }
 function json(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }

@@ -4,6 +4,8 @@
 
 /* ===== CONFIGURAÇÃO (fica em config.js) ===== */
 const CONFIG = window.CONFIG || { whatsapp: '5571996020606', endpoint: '' };
+// Segurança: impede que o site seja exibido dentro de outro site (golpes de "clickjacking")
+if (window.top !== window.self && !CONFIG.exemplo){ try { window.top.location.replace(window.location.href); } catch(e){ document.documentElement.style.display = 'none'; } }
 
 const CATEGORIAS = [
   {nome:'Fazenda',    ico:'fazenda', txt:'Áreas produtivas para pecuária, agricultura e investimento.'},
@@ -186,6 +188,7 @@ function mostrarAba(nome){
   alvo.querySelectorAll('.rv').forEach(x => x.classList.add('in'));
   window.scrollTo({top:0, behavior:'instant' in window ? 'instant' : 'auto'});
   if (nome === 'imoveis') montarImoveis();
+  if (nome === 'inicio') montarVistos();
 }
 
 /* ===== FILTROS DOS IMÓVEIS ===== */
@@ -211,9 +214,10 @@ async function carregarPosts(){
   try {
     if (CONFIG.endpoint){
       const r = await fetch(CONFIG.endpoint + '?acao=posts', {cache:'no-store'});
-      const j = await r.json(); if (j.ok) lista = j.posts || [];
+      const j = await r.json(); if (j.ok){ lista = j.posts || []; if (j.config){ store.set('gbi-cfg', j.config); aplicarConfig(j.config); } }
     } else {
       lista = (store.get('gbi-demo-posts') || CONFIG.exemplo || []).filter(p => p.status === 'publicado');
+      const dc = store.get('gbi-demo-config'); if (dc) aplicarConfig(dc);
     }
   } catch(_) {}
   POSTS = [...lista, ...IMOVEIS.map((p, i) => Object.assign({id:'fixo' + i}, p))];
@@ -251,6 +255,7 @@ function cartao(p, mini){
       ${capa ? `<img src="${esc(capa)}" alt="${esc(p.titulo)}" loading="lazy">` : '<div class="noimg"><svg><use href="#i-casa"/></svg></div>'}
       <div class="badges">${selos(p)}</div>
       ${SIT[p.situacao] ? `<span class="sit ${p.situacao}">${SIT[p.situacao]}</span>` : (Midia.temVideo(p) ? '<span class="play" title="Tem vídeo">▶</span>' : '')}
+      <button type="button" class="fav${ehFav(p.id) ? ' on' : ''}" data-fav="${esc(p.id)}" aria-label="Salvar nos favoritos" title="Salvar nos favoritos"><svg><use href="#i-heart"/></svg></button>
       <div class="pc">
         <span class="lo">${esc(p.cidade || catDe(p))}</span>
         <h3>${tituloFmt(p.titulo)}</h3>
@@ -267,6 +272,7 @@ function montarDestaques(){
   box.hidden = !lista.length;
   $('#destCards').innerHTML = lista.map((p, i) => cartao(Object.assign({}, p, {formato: lista.length % 2 && i === 0 ? 'largo' : 'padrao'}))).join('');
   ligarCartoes($('#destCards'));
+  montarVistos();
 }
 function ligarCartoes(raiz){
   raiz.querySelectorAll('[data-post]').forEach(a => {
@@ -339,6 +345,7 @@ function abrirImovel(id){
       <div class="sbar-p"><small>Valor</small><b>${esc(p.preco || 'Sob consulta')}</b></div>
       ${rapidos.length ? `<div class="sbar-f">${rapidos.map(f => `<div><svg><use href="#i-${iconeFicha(f.rotulo)}"/></svg><span><small>${esc(f.rotulo)}</small>${esc(f.valor)}</span></div>`).join('')}</div>` : '<div class="sbar-f"></div>'}
       <div class="sbar-a">
+        <button class="ic2 fav2${ehFav(p.id) ? ' on' : ''}" data-fav="${esc(p.id)}" title="Salvar nos favoritos" aria-label="Salvar nos favoritos"><svg><use href="#i-heart"/></svg><span>Favoritar</span></button>
         <button class="ic2" data-share title="Compartilhar" aria-label="Compartilhar"><svg><use href="#i-share"/></svg><span>Compartilhar</span></button>
         <button class="btn btn-gold" data-chat="${interesse}">Tenho interesse</button>
       </div>
@@ -412,12 +419,13 @@ function abrirImovel(id){
   ligarCartoes(body);
   ligarLocal(body);
   body.querySelectorAll('[data-share]').forEach(sh => sh.onclick = async () => {
-    const texto = `${p.titulo}${p.cidade ? ' — ' + p.cidade : ''}${p.preco ? ' — ' + p.preco : ''}\nVeja no site do Grupo Bahia Imóveis: ${location.href.split('#')[0]}`;
+    const texto = `${p.titulo}${p.cidade ? ' — ' + p.cidade : ''}${p.preco ? ' — ' + p.preco : ''}\nVeja no site do Grupo Bahia Imóveis: ${linkImovel(p.id)}`;
     try {
-      if (navigator.share) await navigator.share({title: p.titulo, text: texto});
+      if (navigator.share) await navigator.share({title: p.titulo, text: texto, url: linkImovel(p.id)});
       else { await navigator.clipboard.writeText(texto); const s = sh.querySelector('span'); if (s){ s.textContent = 'Texto copiado!'; setTimeout(() => s.textContent = 'Compartilhar', 2200); } }
     } catch(_) {}
   });
+  marcarVisto(p.id);
   mostrarAba('detalhe');
 }
 
@@ -570,7 +578,7 @@ function desenharImoveis(){
   sincronizarCampos();
   const cat = p => p.categoria || (p.tipo === 'divulgacao' ? 'Divulgação' : 'Imóvel');
   const temFiltro = FILTRO.categoria || FILTRO.cidade || FILTRO.max;
-  const lista = IM.filter(p =>
+  const lista = IM.filter(p => (!FILTRO.fav || ehFav(p.id)) &&
     (!FILTRO.categoria || semAcento(cat(p)) === semAcento(FILTRO.categoria)) &&
     (!FILTRO.cidade || semAcento([p.cidade, p.titulo, p.descricao].join(' ')).includes(semAcento(FILTRO.cidade))) &&
     (!FILTRO.max || !precoNumero(p.preco) || precoNumero(p.preco) <= FILTRO.max));
@@ -586,7 +594,13 @@ function desenharImoveis(){
   const tipos = [...new Set(IM.map(cat))];
   chips.style.display = tipos.length > 1 ? '' : 'none';
   chips.innerHTML = ['', ...tipos].map(t => `<button class="chip ${semAcento(t)===semAcento(FILTRO.categoria)?'on':''}" data-t="${esc(t)}">${t ? esc(t) : 'Todos'}</button>`).join('');
-  chips.querySelectorAll('.chip').forEach(b => b.onclick = () => { FILTRO.categoria = b.dataset.t; desenharImoveis(); });
+  const nf = favs().filter(id => IM.some(p => p.id === id)).length;
+  if (nf){ chips.style.display = ''; chips.insertAdjacentHTML('beforeend', `<button class="chip chip-fav ${FILTRO.fav ? 'on' : ''}" data-favchip><svg><use href="#i-heart"/></svg>Favoritos <b>${nf}</b></button>`); }
+  if (FILTRO.fav && !nf) FILTRO.fav = false;
+  chips.querySelectorAll('.chip').forEach(b => b.onclick = () => {
+    if (b.hasAttribute('data-favchip')){ FILTRO.fav = !FILTRO.fav; } else { FILTRO.fav = false; FILTRO.categoria = b.dataset.t; }
+    desenharImoveis(); });
+  if (FILTRO.fav) chips.querySelectorAll('.chip:not([data-favchip])').forEach(b => b.classList.remove('on'));
   if (!lista.length && (IM.length || temFiltro)){
     const oq = FILTRO.categoria ? FILTRO.categoria.toLowerCase() : 'imóvel';
     alvo.innerHTML = `
@@ -607,7 +621,7 @@ function desenharImoveis(){
       </div>`;
     return;
   }
-  alvo.innerHTML = lista.map(p => cartao(p)).join('');
+  alvo.innerHTML = ordenarLista(lista).map(p => cartao(p)).join('');
   ligarCartoes(alvo);
 }
 
@@ -659,7 +673,7 @@ function iniciarVideoCapa(){
   const lista = (CONFIG.capa || []).filter(c => c && c.src); if (!lista.length) return;
   const reduz = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const economia = navigator.connection && (navigator.connection.saveData || /2g/.test(navigator.connection.effectiveType || ''));
-  if (reduz || economia) return;
+  if (reduz || economia || CONFIG.videoAtivo === false) return;
   const vids = [...box.querySelectorAll('video')];
   const seg = Math.max(4, +CONFIG.segundosPorClipe || 7) * 1000;
   // qualidade: Full HD em telas grandes, 720p nas demais; cai para uma menor se a maior não existir
@@ -706,6 +720,114 @@ function iniciarVideoCapa(){
   document.addEventListener('visibilitychange', retomar);
 }
 
+
+/* ===== CONFIGURAÇÕES DEFINIDAS NO PAINEL ===== */
+const CFG_BASE = { whatsappExibir: '(71) 99602-0606', cnpj: '00.987.899/0001-88' };
+let CFG_APLICADA = Object.assign({}, CFG_BASE);
+function trocarTexto(antigo, novo){
+  if (!antigo || !novo || antigo === novo) return;
+  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT); let n; const lista = [];
+  while ((n = w.nextNode())) if (n.data.includes(antigo) && !n.parentElement.closest('#adm, script, style')) lista.push(n);
+  lista.forEach(x => x.data = x.data.split(antigo).join(novo));
+}
+function aplicarConfig(c){
+  if (!c || typeof c !== 'object') return;
+  if (c.whatsapp && /^\d{12,13}$/.test(c.whatsapp)) CONFIG.whatsapp = c.whatsapp;
+  if (Array.isArray(c.capa) && c.capa.length) CONFIG.capa = c.capa.filter(v => /^https:\/\//.test(v.src || ''));
+  if (c.segundosPorClipe) CONFIG.segundosPorClipe = c.segundosPorClipe;
+  if (c.videoAtivo === false) CONFIG.videoAtivo = false;
+  if (c.whatsappExibir) { trocarTexto(CFG_APLICADA.whatsappExibir, c.whatsappExibir); CFG_APLICADA.whatsappExibir = c.whatsappExibir; }
+  if (c.cnpj) { trocarTexto(CFG_APLICADA.cnpj, c.cnpj); CFG_APLICADA.cnpj = c.cnpj; }
+  const hero = $('.tab[data-aba="inicio"] .hero');
+  if (hero){
+    const eb = hero.querySelector('.eyebrow'), h1 = hero.querySelector('h1'), ld = hero.querySelector('.lead');
+    if (c.heroEyebrow && eb && eb.textContent !== c.heroEyebrow) eb.textContent = c.heroEyebrow;
+    if ((c.heroTitulo1 || c.heroTitulo2) && h1){
+      const t1 = c.heroTitulo1 || 'Realizando sonhos,', t2 = c.heroTitulo2 || 'construindo futuro!';
+      if (h1.dataset.t !== t1 + '|' + t2){ h1.dataset.t = t1 + '|' + t2; h1.textContent = t1; h1.append(document.createElement('br')); const em = document.createElement('em'); em.className = 'gold'; em.textContent = t2; h1.append(em); }
+    }
+    if (c.heroTexto && ld && ld.textContent !== c.heroTexto) ld.textContent = c.heroTexto;
+    const fx = hero.querySelector('.faixa');
+    if (fx){ fx.hidden = !(c.faixaAtiva && c.faixaTexto); if (!fx.hidden){ fx.querySelector('span').textContent = c.faixaTexto; fx.dataset.chat = 'Olá! Vi no site: ' + c.faixaTexto; } }
+  }
+  const sobre = $('.tab[data-aba="empresa"] .about > div:last-child > p');
+  if (c.sobreTexto && sobre && sobre.textContent !== c.sobreTexto) sobre.textContent = c.sobreTexto;
+  // e-mail e Instagram no rodapé e na página de contato
+  [['email', c.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email) ? 'mailto:' + c.email : '', 'mail', 'E-mail', c.email],
+   ['instagram', /^https:\/\//.test(c.instagram || '') ? c.instagram : '', 'insta', 'Instagram', (c.instagram || '').replace(/^https:\/\/(www\.)?instagram\.com\//, '@').replace(/\/$/, '')]
+  ].forEach(([k, href, ico, rot, txt]) => {
+    $$(`[data-extra="${k}"]`).forEach(e => e.remove());
+    if (!href) return;
+    const f = $('.fcontato'); if (f) f.insertAdjacentHTML('beforeend', `<a class="fline" data-extra="${k}" href="${esc(href)}" target="_blank" rel="noopener noreferrer"><svg><use href="#i-${ico}"/></svg><span><small>${rot}</small>${esc(txt)}</span></a>`);
+    const ci = $('.cinfo'); if (ci) ci.insertAdjacentHTML('beforeend', `<div data-extra="${k}"><span class="ico"><svg><use href="#i-${ico}"/></svg></span><span><b>${rot}</b><small><a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(txt)}</a></small></span></div>`);
+  });
+}
+// aplica na hora a última configuração conhecida (evita "piscar" textos antigos)
+(() => { const c = store.get('gbi-cfg'); if (c) aplicarConfig(c); })();
+
+/* ===== ORDENAÇÃO DA VITRINE ===== */
+const dataNum = s => { const m = String(s || '').match(/(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}))?/); return m ? +new Date(m[3], m[2] - 1, m[1], m[4] || 0, m[5] || 0) : 0; };
+function ordenarLista(lista){
+  const o = ($('#ordem') || {}).value || '';
+  const pr = p => precoNumero(p.preco) || 0;
+  if (o === 'recentes') return [...lista].sort((a, b) => dataNum(b.criado) - dataNum(a.criado));
+  if (o === 'menor') return [...lista].sort((a, b) => (pr(a) || 9e15) - (pr(b) || 9e15));
+  if (o === 'maior') return [...lista].sort((a, b) => pr(b) - pr(a));
+  return lista;
+}
+
+/* ===== LINK DIRETO PARA CADA IMÓVEL ===== */
+const linkImovel = id => location.origin + location.pathname + '?imovel=' + encodeURIComponent(id);
+function abrirDoLink(){
+  const id = new URLSearchParams(location.search).get('imovel'); if (!id) return;
+  if (POSTS.some(p => p.id === id)) abrirImovel(id);
+  history.replaceState(null, '', location.pathname);
+}
+
+
+/* ===== EXPERIÊNCIA: favoritos, vistos recentemente, avisos, topo ===== */
+const favs = () => store.get('gbi-fav') || [];
+const ehFav = id => favs().includes(id);
+function avisar(txt){
+  let t = $('#toast2'); if (!t){ document.body.insertAdjacentHTML('beforeend', '<div id="toast2" role="status" aria-live="polite"></div>'); t = $('#toast2'); }
+  t.textContent = txt; t.classList.remove('show'); void t.offsetWidth; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2600);
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-fav]'); if (!b) return;
+  e.preventDefault(); e.stopPropagation();
+  const id = b.dataset.fav, l = favs(), on = !l.includes(id);
+  store.set('gbi-fav', on ? [id, ...l].slice(0, 50) : l.filter(x => x !== id));
+  $$(`[data-fav="${CSS.escape(id)}"]`).forEach(x => { x.classList.toggle('on', on); x.classList.remove('pop'); void x.offsetWidth; x.classList.add('pop'); });
+  avisar(on ? '♥ Salvo nos seus favoritos' : 'Removido dos favoritos');
+  if (!$('.tab[data-aba="imoveis"]').hidden && carregado) desenharImoveis();
+}, true);
+function marcarVisto(id){ store.set('gbi-vistos', [id, ...(store.get('gbi-vistos') || []).filter(x => x !== id)].slice(0, 8)); }
+function montarVistos(){
+  const box = $('#vistos'); if (!box) return;
+  const l = (store.get('gbi-vistos') || []).map(id => POSTS.find(p => p.id === id)).filter(Boolean).slice(0, 4);
+  box.hidden = !l.length; if (!l.length) return;
+  $('#vistosCards').innerHTML = l.map(p => cartao(p, true)).join(''); ligarCartoes($('#vistosCards'));
+}
+// barra de progresso da leitura + botão voltar ao topo
+(() => {
+  document.body.insertAdjacentHTML('beforeend', '<div class="progresso" aria-hidden="true"><i></i></div><button type="button" class="topo-btn" aria-label="Voltar ao topo" title="Voltar ao topo">↑</button>');
+  const bar = $('.progresso i'), btn = $('.topo-btn');
+  const at = () => { const h = document.documentElement.scrollHeight - innerHeight; bar.style.transform = `scaleX(${h > 0 ? Math.min(1, scrollY / h) : 0})`; btn.classList.toggle('show', scrollY > 900); };
+  addEventListener('scroll', at, {passive: true}); addEventListener('resize', at); at();
+  btn.onclick = () => window.scrollTo({top: 0, behavior: 'smooth'});
+})();
+// leve efeito 3D nos cartões ao passar o mouse (computador)
+if (matchMedia('(hover:hover) and (pointer:fine)').matches && !matchMedia('(prefers-reduced-motion: reduce)').matches){
+  document.addEventListener('pointermove', e => {
+    const c = e.target.closest && e.target.closest('.pcard'); if (!c) return;
+    const r = c.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5;
+    c.style.transform = `perspective(1100px) rotateY(${x * 5}deg) rotateX(${-y * 5}deg) translateY(-4px)`;
+    c.style.setProperty('--mx', (x + .5) * 100 + '%'); c.style.setProperty('--my', (y + .5) * 100 + '%');
+  }, {passive: true});
+  document.addEventListener('pointerout', e => { const c = e.target.closest && e.target.closest('.pcard'); if (c && !c.contains(e.relatedTarget)) c.style.transform = ''; });
+}
+
 /* ===== GERAL ===== */
 function iniciar(){
   montarChat(); montarCategorias(); montarBusca(); montarContato();
@@ -736,7 +858,8 @@ function iniciar(){
     const el = e.target.closest('[data-chat]');
     if (el){ e.preventDefault(); $('#top').classList.remove('open'); fecharLightbox(); abrirChat(el.dataset.chat); }
   });
-  carregarPosts().then(() => { carregado = true; montarDestaques(); if (!$('.tab[data-aba="imoveis"]').hidden) desenharImoveis(); });
+  carregarPosts().then(() => { carregado = true; montarDestaques(); if (!$('.tab[data-aba="imoveis"]').hidden) desenharImoveis(); abrirDoLink(); });
+  const ord = $('#ordem'); if (ord) ord.addEventListener('change', () => desenharImoveis());
 
   // Menu sempre completo no computador: se não couber, compacta em níveis (c1, c2, c3)
   const ajustarMenu = () => {
@@ -901,6 +1024,7 @@ const I18N = (() => {
     ['Digite sua mensagem.', 'Please type your message.', 'Escriba su mensaje.'], ['Não conseguimos enviar agora. Tente novamente em instantes.', "We couldn't send it now. Please try again shortly.", 'No pudimos enviar ahora. Intente de nuevo en unos instantes.'],
     ['Abrimos o WhatsApp com sua mensagem pronta, é só tocar em enviar.', 'We opened WhatsApp with your message ready, just tap send.', 'Abrimos WhatsApp con su mensaje listo, solo toque en enviar.'],
     ['Empresa registrada', 'Registered company', 'Empresa registrada'],
+    ['Ordenar', 'Sort by', 'Ordenar'], ['Favoritos', 'Favorites', 'Favoritos'], ['Favoritar', 'Save', 'Guardar'], ['Para você', 'For you', 'Para usted'], ['Vistos', 'Recently', 'Vistos'], ['recentemente', 'viewed', 'recientemente'], ['♥ Salvo nos seus favoritos', '♥ Saved to your favorites', '♥ Guardado en sus favoritos'], ['Removido dos favoritos', 'Removed from favorites', 'Eliminado de favoritos'], ['Destaques', 'Featured', 'Destacados'], ['Mais recentes', 'Newest', 'Más recientes'], ['Menor preço', 'Lowest price', 'Menor precio'], ['Maior preço', 'Highest price', 'Mayor precio'], ['Saiba mais →', 'Learn more →', 'Más información →'], ['E-mail', 'E-mail', 'Correo'],
     ['Praias', 'Beaches', 'Playas'], ['Terrenos com lago', 'Land with lakes', 'Terrenos con lago'], ['Fazendas', 'Farms', 'Haciendas'], ['Litoral', 'Coastline', 'Litoral'], ['Rios e natureza', 'Rivers and nature', 'Ríos y naturaleza'],
     ['Ver as fotos', 'See the photos', 'Ver las fotos'], ['Assistir ao vídeo', 'Watch the video', 'Ver el video'], ['Valor', 'Price', 'Valor'],
     ['Sobre o imóvel', 'About the property', 'Sobre el inmueble'], ['Conheça', 'Discover', 'Conozca'], ['cada detalhe', 'every detail', 'cada detalle'], ['os detalhes', 'the details', 'los detalles'],
