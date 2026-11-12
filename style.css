@@ -822,5 +822,13 @@ button.restrito.loading svg{animation:gira .8s linear infinite}
 @keyframes barra{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @media(max-width:620px){.hvid-ui{bottom:14px}.hvid-dots button{width:22px}.hvid::after{background:linear-gradient(180deg,#282d33b3 0%,#282d3366 40%,#282d33cc 75%,#282d33 100%)}}
 @media (prefers-reduced-motion:reduce){.hvid{display:none}}
+/* V17: nova logomarca (proporção 900x477) */
+.nav .brand img{aspect-ratio:900/477;height:80px}
+.top.c1 .nav .brand img{height:70px}
+.top.c2 .nav .brand img{height:62px}
+.top.c3 .nav .brand img{height:56px}
+@media(max-width:620px){.nav .brand img{height:64px}}
+.fbrand img{height:104px}
+.about-card img{max-width:420px;margin:0 auto}
 
 @media(max-width:620px){.menu{top:84px}}
