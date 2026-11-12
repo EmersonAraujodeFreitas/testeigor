@@ -277,86 +277,146 @@ function ligarCartoes(raiz){
 
 /* ===== PÁGINA DO IMÓVEL (abre na mesma tela, sem trocar o link) ===== */
 let abaAnterior = 'imoveis';
+const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const dd = n => String(n).padStart(2, '0');
+function iconeFicha(rotulo){
+  const r = semAcento(rotulo);
+  if (/agua|nascente|rio|poco/.test(r)) return 'gota';
+  if (/energia|luz|eletric/.test(r)) return 'raio';
+  if (/document|escritura|registro/.test(r)) return 'shield';
+  if (/quarto|banheiro|suite|casa|constru/.test(r)) return 'casa';
+  if (/acesso|distancia|estrada/.test(r)) return 'pin';
+  if (/pasto|pastagem|lavoura|plant|pomar/.test(r)) return 'sitio';
+  if (/benfeit|curral|galpao|armazem/.test(r)) return 'fazenda';
+  if (/area|hectare|topograf|terreno/.test(r)) return 'terreno';
+  return 'check';
+}
 function abrirImovel(id){
   const p = POSTS.find(x => x.id === id); if (!p) return;
   const atual = $('.tab:not([hidden])'); if (atual && atual.dataset.aba !== 'detalhe') abaAnterior = atual.dataset.aba;
-  const ms = p.midias || [], nFotos = ms.filter(m => m.tipo === 'imagem').length, nVid = ms.length - nFotos;
-  const thumb = (m, i, extra) => {
-    const src = m.tipo === 'imagem' ? m.url : Midia.capa({midias:[m]});
-    return `<button class="g${i ? '' : ' g0'}" data-i="${i}"${i === 2 && ms.length > 3 ? ` data-mais="${ms.length - 3}"` : ''}>${src ? `<img src="${esc(src)}" alt="" loading="${i ? 'lazy' : 'eager'}">` : '<span class="gv"></span>'}${m.tipo !== 'imagem' ? '<span class="play">▶</span>' : ''}${extra || ''}</button>`;
-  };
-  const vis = ms.slice(0, 5);
-  const galeria = !ms.length ? '' : `
-    <div class="gal n${vis.length}" id="sec-fotos">
-      ${vis.map((m, i) => thumb(m, i, i === 4 && ms.length > 5 ? `<span class="mais">+${ms.length - 5}</span>` : '')).join('')}
-    </div>
-    <p class="gcap">${[nFotos && nFotos + (nFotos > 1 ? ' fotos' : ' foto'), nVid && nVid + (nVid > 1 ? ' vídeos' : ' vídeo')].filter(Boolean).join(' · ')} · Clique em uma imagem para ampliar e percorrer a galeria</p>`;
-  const local = blocoLocal(p), temLocal = !!local;
+  const ms = p.midias || [];
+  const fotos = ms.map((m, i) => ({m, i})).filter(x => x.m.tipo === 'imagem');
+  const videos = ms.map((m, i) => ({m, i})).filter(x => x.m.tipo !== 'imagem');
+  const capa = Midia.capa(p);
+  const sit = SIT[p.situacao];
+  const destaques = (p.resumo || '').split('·').map(s => s.trim()).filter(Boolean);
+  const ficha = (p.ficha || []).filter(f => f.rotulo && f.valor);
+  const rapidos = ficha.slice(0, 3);
+  const local = blocoLocal(p);
+  const interesse = esc('Olá! Tenho interesse em: ' + p.titulo + (p.cidade ? ' (' + p.cidade + ')' : '') + '.');
   const sim = (() => {
     const outros = POSTS.filter(x => x.id !== p.id);
     const mesmo = outros.filter(x => catDe(x) === catDe(p));
-    return {lista: (mesmo.length ? mesmo : outros).slice(0, 3), mesmo: mesmo.length > 0};
+    return {lista: [...mesmo, ...outros.filter(x => catDe(x) !== catDe(p))].slice(0, 8), mesmo: mesmo.length > 0};
   })();
-  const interesse = esc('Olá! Tenho interesse em: ' + p.titulo + (p.cidade ? ' (' + p.cidade + ')' : '') + '.');
+  // próximos 6 dias (sem domingo)
+  const dias = []; for (let d = new Date(), k = 0; dias.length < 6 && k < 10; k++){ d.setDate(d.getDate() + 1); if (d.getDay() !== 0) dias.push(new Date(d)); }
+  const mosaico = lista => lista.map(({m, i}, k) => {
+    const src = m.tipo === 'imagem' ? m.url : Midia.capa({midias: [m]});
+    return `<button class="mz${k % 6 === 0 ? ' big' : ''}" data-i="${i}">${src ? `<img src="${esc(src)}" alt="" loading="lazy">` : '<span class="gv"></span>'}${m.tipo !== 'imagem' ? '<span class="play">▶</span>' : ''}</button>`;
+  }).join('');
+
   $('#detalheBody').innerHTML = `
-    <div class="wrap">
-      <button class="voltar" data-tab="${abaAnterior}">← Voltar</button>
-      ${galeria}
-      <nav class="subnav">
-        ${ms.length ? '<button data-ir="sec-fotos">Fotos</button>' : ''}<button data-ir="sec-desc">Descrição</button>${temLocal ? '<button data-ir="sec-local">Localização</button>' : ''}<button data-ir="sec-contato">Contato</button>
-      </nav>
-      <header class="dhead">
-        <div class="dtop"><span class="lo">${esc(p.cidade || catDe(p))}</span>
-          <div class="dsel">${p.tipo === 'lancamento' ? '<span class="chip-s">Lançamento</span>' : ''}<span class="chip-s">${esc(catDe(p))}</span>${SIT[p.situacao] ? `<span class="chip-s sit-${p.situacao}">${SIT[p.situacao]}</span>` : '<span class="chip-s ok">Disponível</span>'}</div></div>
-        <h1>${esc(p.titulo)}</h1>
-        ${p.resumo ? `<p>${esc(p.resumo)}</p>` : ''}
-        <div class="dact">${p.preco ? `<b class="pr">${esc(p.preco)}</b>` : '<span></span>'}<button class="btn btn-ghost sm" id="compartilhar"><svg><use href="#i-share"/></svg>Compartilhar</button></div>
-      </header>
-      ${(p.ficha || []).length ? `<div class="ficha"><h2>Ficha técnica</h2><dl>${p.ficha.map(f => `<div><dt>${esc(f.rotulo)}</dt><dd>${esc(f.valor)}</dd></div>`).join('')}</dl></div>` : ''}
-      <div class="dgrid" id="sec-desc">
-        <div class="ddesc">
-          <h2>Descrição ${p.tipo === 'divulgacao' ? 'da publicação' : 'do imóvel'}</h2>
-          ${(p.descricao || 'Consulte os detalhes com a nossa equipe.').split(/\n\s*\n|\n/).filter(s => s.trim()).map(s => `<p>${esc(s)}</p>`).join('')}
+    <section class="ph2${capa ? '' : ' sem'}">
+      <div class="ph2-media">${capa ? `<img src="${esc(capa)}" alt="${esc(p.titulo)}">` : ''}</div>
+      <div class="wrap ph2-in">
+        <button class="voltar2" data-tab="${abaAnterior}">← Voltar</button>
+        <div class="ph2-txt">
+          <div class="ph2-chips">${p.tipo === 'lancamento' ? '<span>Lançamento</span>' : ''}<span>${esc(catDe(p))}</span><span class="${p.situacao || 'disponivel'}">${sit || 'Disponível'}</span></div>
+          <span class="lo">${esc(p.cidade || '')}</span>
+          <h1>${tituloFmt(p.titulo)}</h1>
+          ${p.resumo ? `<p>${esc(p.resumo)}</p>` : ''}
+          <div class="ph2-act">
+            ${fotos.length ? `<button class="btn btn-gold" data-galeria="0"><svg><use href="#i-grid"/></svg>Ver as fotos <b>${fotos.length}</b></button>` : ''}
+            ${videos.length ? `<button class="btn btn-ghost light" data-galeria="${videos[0].i}"><svg><use href="#i-play"/></svg>Assistir ao vídeo</button>` : ''}
+          </div>
         </div>
-        <aside class="dbox" id="sec-contato">
-          <span class="mini">Atendimento direto</span>
-          <h3>Gostou deste imóvel?</h3>
-          <p>Converse com a equipe do Grupo Bahia Imóveis para tirar dúvidas e agendar uma visita.</p>
-          <button class="btn btn-gold" data-chat="${interesse}">Tenho interesse ↗</button>
-          <b class="tel">(71) 99602-0606</b>
-          <small>Grupo Bahia Imóveis · Atendimento pelo WhatsApp</small>
-        </aside>
+        ${ms.length > 1 ? `<div class="ph2-thumbs">${ms.slice(1, 4).map((m, k) => { const s = m.tipo === 'imagem' ? m.url : Midia.capa({midias: [m]}); return `<button data-galeria="${k + 1}">${s ? `<img src="${esc(s)}" alt="">` : ''}${k === 2 && ms.length > 4 ? `<span>+${ms.length - 4}</span>` : ''}</button>`; }).join('')}</div>` : ''}
       </div>
+    </section>
+
+    <div class="sbar"><div class="wrap sbar-in">
+      <div class="sbar-p"><small>Valor</small><b>${esc(p.preco || 'Sob consulta')}</b></div>
+      ${rapidos.length ? `<div class="sbar-f">${rapidos.map(f => `<div><svg><use href="#i-${iconeFicha(f.rotulo)}"/></svg><span><small>${esc(f.rotulo)}</small>${esc(f.valor)}</span></div>`).join('')}</div>` : '<div class="sbar-f"></div>'}
+      <div class="sbar-a">
+        <button class="ic2" data-share title="Compartilhar" aria-label="Compartilhar"><svg><use href="#i-share"/></svg><span>Compartilhar</span></button>
+        <button class="btn btn-gold" data-chat="${interesse}">Tenho interesse</button>
+      </div>
+    </div></div>
+
+    <div class="wrap d2">
+      <div class="d2-main">
+        <section class="d2-sec" id="sec-desc">
+          <span class="eyebrow">Sobre o imóvel</span>
+          <h2>Conheça ${p.tipo === 'divulgacao' ? 'os detalhes' : 'cada detalhe'}<span class="gold">.</span></h2>
+          ${destaques.length ? `<ul class="hl2">${destaques.map(t => `<li><svg><use href="#i-check"/></svg>${esc(t)}</li>`).join('')}</ul>` : ''}
+          <div class="txt2">${(p.descricao || 'Consulte os detalhes com a nossa equipe.').split(/\n\s*\n|\n/).filter(s => s.trim()).map(s => `<p>${esc(s)}</p>`).join('')}</div>
+        </section>
+        ${ficha.length ? `
+        <section class="d2-sec">
+          <span class="eyebrow">Ficha técnica</span>
+          <div class="fi2">${ficha.map(f => `<div><i><svg><use href="#i-${iconeFicha(f.rotulo)}"/></svg></i><span><small>${esc(f.rotulo)}</small><b>${esc(f.valor)}</b></span></div>`).join('')}</div>
+        </section>` : ''}
+        ${ms.length ? `
+        <section class="d2-sec" id="sec-fotos">
+          <div class="mz-head"><div><span class="eyebrow">Galeria</span><h2>Fotos e vídeos</h2></div>
+            ${fotos.length && videos.length ? `<div class="lc-tabs mz-tabs"><button class="on" data-mz="f">Fotos ${fotos.length}</button><button data-mz="v">Vídeos ${videos.length}</button></div>` : ''}</div>
+          <div class="mz-grid" data-mzp="f">${mosaico(fotos.length ? fotos : videos)}</div>
+          ${fotos.length && videos.length ? `<div class="mz-grid" data-mzp="v" hidden>${mosaico(videos)}</div>` : ''}
+        </section>` : ''}
+      </div>
+      <aside class="d2-side" id="sec-contato">
+        <div class="vis">
+          <span class="mini">Visita guiada</span>
+          <h3>Agende sua visita</h3>
+          <p>Escolha o melhor dia e período. A nossa equipe confirma com você pelo WhatsApp.</p>
+          <div class="vis-l">Dia</div>
+          <div class="vis-d">${dias.map((d, k) => `<button type="button" class="${k ? '' : 'on'}" data-dia="${dd(d.getDate())}/${dd(d.getMonth() + 1)}/${d.getFullYear()}" data-sem="${DIAS[d.getDay()]}"><small>${DIAS[d.getDay()]}</small><b>${dd(d.getDate())}</b><small>${dd(d.getMonth() + 1)}</small></button>`).join('')}</div>
+          <div class="vis-l">Período</div>
+          <div class="vis-p"><button type="button" class="on" data-per="Manhã">Manhã</button><button type="button" data-per="Tarde">Tarde</button></div>
+          <button class="btn btn-gold w100" id="pedirVisita"><svg><use href="#i-chat"/></svg>Solicitar visita</button>
+          <div class="vis-or"><span>ou</span></div>
+          <button class="btn btn-ghost w100" data-chat="${interesse}">Tirar uma dúvida</button>
+          <a class="vis-tel" href="#" data-chat="${interesse}"><svg><use href="#i-wa"/></svg>(71) 99602-0606</a>
+        </div>
+      </aside>
     </div>
+
     ${local}
-    <div class="wrap">
-      <div class="agende">
-        <div><h2>Agende sua visita</h2><p>Fale com a nossa equipe para consultar disponibilidade e combinar os detalhes.</p></div>
-        <button class="btn btn-gold" data-chat="${esc('Olá! Gostaria de agendar uma visita: ' + p.titulo + '.')}">Agendar pelo chat ↗</button>
-      </div>
-      ${sim.lista.length ? `
-      <div class="similares">
-        <span class="eyebrow">Continue explorando</span>
-        <h2>Imóveis similares</h2>
-        ${sim.mesmo ? '' : '<p class="lead">No momento, não há outro imóvel do mesmo tipo no site. Conheça também estas opções na Bahia.</p>'}
-        <div class="scards">${sim.lista.map(x => cartao(x, true)).join('')}</div>
-      </div>` : ''}
-    </div>`;
+
+    ${sim.lista.length ? `
+    <section class="sim2"><div class="wrap">
+      <div class="sim2-h"><div><span class="eyebrow">Continue explorando</span><h2>${sim.mesmo ? 'Imóveis similares' : 'Outras oportunidades'}</h2></div>
+        <div class="sim2-n"><button class="ic2" data-sim="-1" aria-label="Anterior">‹</button><button class="ic2" data-sim="1" aria-label="Próxima">›</button></div></div>
+      <div class="sim2-t">${sim.lista.map(x => cartao(x, true)).join('')}</div>
+    </div></section>` : ''}
+
+    <div class="mbar2"><div><small>${esc(p.preco ? 'Valor' : catDe(p))}</small><b>${esc(p.preco || 'Sob consulta')}</b></div><button class="ic2" data-share aria-label="Compartilhar"><svg><use href="#i-share"/></svg></button><button class="btn btn-gold" data-chat="${interesse}">Tenho interesse</button></div>`;
+
   const body = $('#detalheBody');
-  body.querySelectorAll('.gal .g').forEach(b => b.onclick = () => lightbox(ms, +b.dataset.i));
-  body.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => {
-    const el = $('#' + b.dataset.ir); if (el) window.scrollTo({top: el.getBoundingClientRect().top + scrollY - 160, behavior:'smooth'});
+  body.querySelectorAll('[data-galeria]').forEach(b => b.onclick = () => lightbox(ms, +b.dataset.galeria));
+  body.querySelectorAll('.mz').forEach(b => b.onclick = () => lightbox(ms, +b.dataset.i));
+  body.querySelectorAll('[data-mz]').forEach(b => b.onclick = () => {
+    body.querySelectorAll('[data-mz]').forEach(x => x.classList.toggle('on', x === b));
+    body.querySelectorAll('[data-mzp]').forEach(x => x.hidden = x.dataset.mzp !== b.dataset.mz);
   });
+  const escolher = sel => body.querySelectorAll(sel).forEach(b => b.onclick = () => body.querySelectorAll(sel).forEach(x => x.classList.toggle('on', x === b)));
+  escolher('.vis-d button'); escolher('.vis-p button');
+  $('#pedirVisita').onclick = () => {
+    const d = body.querySelector('.vis-d .on'), per = body.querySelector('.vis-p .on');
+    abrirChat(`Olá! Gostaria de agendar uma visita: ${p.titulo}${p.cidade ? ' (' + p.cidade + ')' : ''}.\nDia: ${d.dataset.sem}, ${d.dataset.dia}\nPeríodo: ${per.dataset.per}`);
+  };
+  const trilho = body.querySelector('.sim2-t');
+  body.querySelectorAll('[data-sim]').forEach(b => b.onclick = () => trilho.scrollBy({left: +b.dataset.sim * (trilho.clientWidth * .8), behavior: 'smooth'}));
   ligarCartoes(body);
   ligarLocal(body);
-  const sh = $('#compartilhar');
-  if (sh) sh.onclick = async () => {
+  body.querySelectorAll('[data-share]').forEach(sh => sh.onclick = async () => {
     const texto = `${p.titulo}${p.cidade ? ' — ' + p.cidade : ''}${p.preco ? ' — ' + p.preco : ''}\nVeja no site do Grupo Bahia Imóveis: ${location.href.split('#')[0]}`;
     try {
       if (navigator.share) await navigator.share({title: p.titulo, text: texto});
-      else { await navigator.clipboard.writeText(texto); sh.lastChild.textContent = 'Texto copiado!'; setTimeout(() => sh.lastChild.textContent = 'Compartilhar', 2200); }
+      else { await navigator.clipboard.writeText(texto); const s = sh.querySelector('span'); if (s){ s.textContent = 'Texto copiado!'; setTimeout(() => s.textContent = 'Compartilhar', 2200); } }
     } catch(_) {}
-  };
+  });
   mostrarAba('detalhe');
 }
 
@@ -752,6 +812,15 @@ const I18N = (() => {
     ['Digite seu nome.', 'Please enter your name.', 'Escriba su nombre.'], ['Digite seu WhatsApp com DDD. Ex.: (71) 99999-9999', 'Enter your WhatsApp with area code. E.g.: (71) 99999-9999', 'Escriba su WhatsApp con código de área. Ej.: (71) 99999-9999'],
     ['Digite sua mensagem.', 'Please type your message.', 'Escriba su mensaje.'], ['Não conseguimos enviar agora. Tente novamente em instantes.', "We couldn't send it now. Please try again shortly.", 'No pudimos enviar ahora. Intente de nuevo en unos instantes.'],
     ['Abrimos o WhatsApp com sua mensagem pronta, é só tocar em enviar.', 'We opened WhatsApp with your message ready, just tap send.', 'Abrimos WhatsApp con su mensaje listo, solo toque en enviar.'],
+    ['Ver as fotos', 'See the photos', 'Ver las fotos'], ['Assistir ao vídeo', 'Watch the video', 'Ver el video'], ['Valor', 'Price', 'Valor'],
+    ['Sobre o imóvel', 'About the property', 'Sobre el inmueble'], ['Conheça', 'Discover', 'Conozca'], ['cada detalhe', 'every detail', 'cada detalle'], ['os detalhes', 'the details', 'los detalles'],
+    ['Galeria', 'Gallery', 'Galería'], ['Fotos e vídeos', 'Photos and videos', 'Fotos y videos'],
+    ['Visita guiada', 'Guided visit', 'Visita guiada'], ['Agende sua visita', 'Schedule your visit', 'Agende su visita'],
+    ['Escolha o melhor dia e período. A nossa equipe confirma com você pelo WhatsApp.', 'Choose the best day and time. Our team will confirm with you on WhatsApp.', 'Elija el mejor día y período. Nuestro equipo le confirma por WhatsApp.'],
+    ['Dia', 'Day', 'Día'], ['Período', 'Time', 'Período'], ['Manhã', 'Morning', 'Mañana'], ['Tarde', 'Afternoon', 'Tarde'],
+    ['Solicitar visita', 'Request a visit', 'Solicitar visita'], ['ou', 'or', 'o'], ['Tirar uma dúvida', 'Ask a question', 'Hacer una consulta'],
+    ['Outras oportunidades', 'Other opportunities', 'Otras oportunidades'], ['Tenho interesse', "I'm interested", 'Me interesa'],
+    ['Seg', 'Mon', 'Lun'], ['Ter', 'Tue', 'Mar'], ['Qua', 'Wed', 'Mié'], ['Qui', 'Thu', 'Jue'], ['Sex', 'Fri', 'Vie'], ['Sáb', 'Sat', 'Sáb'], ['Dom', 'Sun', 'Dom'],
     ['Abrir conversa', 'Open chat', 'Abrir chat'], ['Fechar', 'Close', 'Cerrar'], ['Enviar', 'Send', 'Enviar'], ['Anterior', 'Previous', 'Anterior'], ['Próxima', 'Next', 'Siguiente']
   ];
   const IDX = {pt: 0, en: 1, es: 2};
@@ -765,6 +834,8 @@ const I18N = (() => {
     [/^Obrigado, (.+)! ✅ Sua mensagem foi enviada\. Vamos responder no seu WhatsApp (.+)\.$/, (m, l) => l === 'en' ? `Thank you, ${m[1]}! ✅ Your message was sent. We will reply on your WhatsApp ${m[2]}.` : `¡Gracias, ${m[1]}! ✅ Su mensaje fue enviado. Le responderemos por WhatsApp ${m[2]}.`],
     [/^Obrigado, (.+)! Abrimos o WhatsApp com sua mensagem pronta, é só tocar em enviar\.$/, (m, l) => l === 'en' ? `Thank you, ${m[1]}! We opened WhatsApp with your message ready, just tap send.` : `¡Gracias, ${m[1]}! Abrimos WhatsApp con su mensaje listo, solo toque en enviar.`],
     [/^Mensagem enviada! ✅ Vamos responder no seu WhatsApp (.+)\.$/, (m, l) => l === 'en' ? `Message sent! ✅ We will reply on your WhatsApp ${m[1]}.` : `¡Mensaje enviado! ✅ Le responderemos por WhatsApp ${m[1]}.`],
+    [/^Fotos (\d+)$/, (m, l) => (l === 'en' ? 'Photos ' : 'Fotos ') + m[1]],
+    [/^Vídeos (\d+)$/, (m, l) => (l === 'en' ? 'Videos ' : 'Videos ') + m[1]],
     [/^de (.+)$/, (m, l) => (l === 'en' ? 'from ' : 'de ') + m[1]],
   ];
   const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
@@ -792,7 +863,7 @@ const I18N = (() => {
   let lang = 'pt';
   const orig = new WeakMap(), origAttr = new WeakMap();
   const ATTRS = ['placeholder', 'aria-label', 'title'];
-  const pular = el => !el || el.closest('#adm, script, style, [data-noi18n], .dlist .t b, .lc-top, .pc h3, .scard h3, .dhead h1, .dhead p, .ddesc p, .loc2-head h2, .loc2-head p, .rt, .ficha dd, .pc p, .scard p');
+  const pular = el => !el || el.closest('#adm, script, style, [data-noi18n], .dlist .t b, .lc-top, .pc h3, .scard h3, .dhead h1, .ph2 h1, .ph2 .lo, .ph2-txt > p, .hl2 li, .txt2 p, .fi2 b, .sbar-f span, .dhead p, .ddesc p, .loc2-head h2, .loc2-head p, .rt, .ficha dd, .pc p, .scard p');
   function noTexto(n){
     const el = n.parentElement; if (pular(el)) return;
     if (!orig.has(n)) orig.set(n, n.data);
