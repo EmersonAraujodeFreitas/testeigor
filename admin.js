@@ -512,13 +512,13 @@ async function vContatos(){
 function desenharContatos(){
   desenharFunil();
   const q = $('#ctBusca').value.trim().toLowerCase();
-  const l = CONTATOS.filter(c => (!FILTRO_FUNIL || (c.status || 'Novo') === FILTRO_FUNIL) && (!q || [c.nome, c.tel, c.msg, c.pagina].join(' ').toLowerCase().includes(q)));
+  const l = CONTATOS.filter(c => (!FILTRO_FUNIL || (c.status || 'Novo') === FILTRO_FUNIL) && (!q || [c.nome, c.tel, c.msg, c.pagina, c.imovel, c.tipo, c.regiao, c.pesquisa].join(' ').toLowerCase().includes(q)));
   $('#ctLista').innerHTML = l.length ? `<div class="cardx flush">${l.map(c => {
     const dig = String(c.tel || '').replace(/\D/g, '');
     const link = dig ? 'https://wa.me/55' + dig : '';
     return `<div class="crow" data-i="${CONTATOS.indexOf(c)}">
       <span class="av">${esc(String(c.nome || '?').split(/\s+/).map(x => x[0]).slice(0, 2).join('').toUpperCase())}</span>
-      <div class="cinfo2"><b>${esc(c.nome)}</b><small>${esc(c.tel)} · ${esc(c.data)}${c.pagina ? ' · ' + esc(c.pagina) : ''}</small><p>${esc(c.msg)}</p></div>
+      <div class="cinfo2"><b>${esc(c.nome)}</b><small>${esc(c.tel)} · ${esc(c.data)}${c.pagina ? ' · ' + esc(c.pagina) : ''}</small><p>${esc(c.msg)}</p>${(c.imovel || c.tipo || c.regiao || c.pesquisa) ? `<div class="ct-int">${c.imovel ? `<span>🏡 ${c.linkImovel ? `<a href="${esc(c.linkImovel)}" target="_blank" rel="noopener">${esc(c.imovel)}</a>` : esc(c.imovel)}</span>` : ''}${(c.tipo || c.regiao) ? `<span>📍 ${esc([c.tipo, c.regiao].filter(Boolean).join(' · '))}</span>` : ''}${c.valor ? `<span>💰 ${esc(c.valor)}</span>` : ''}${c.pesquisa ? `<span>🔎 ${esc(c.pesquisa)}</span>` : ''}</div>` : ''}</div>
       <div class="vacts">
         <select class="vsel st-${esc((c.status || 'Novo').replace(/\s/g, '-'))}" aria-label="Etapa do cliente">${FUNIL.map(s => `<option${s === (c.status || 'Novo') ? ' selected' : ''}>${s}</option>`).join('')}</select>
         ${link ? `<a class="btn btn-wa sm" href="${esc(link)}" target="_blank" rel="noopener noreferrer"><svg><use href="#i-wa"/></svg>Responder</a>` : ''}
@@ -531,7 +531,7 @@ $('#ctBusca').addEventListener('input', desenharContatos);
 $('#ctCsv').onclick = () => {
   if (!CONTATOS.length) return toast('Não há contatos para baixar.', 'err');
   const cel = v => { let s = String(v ?? ''); if (/^[=+\-@]/.test(s)) s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; };
-  const linhas = [['Data', 'Nome', 'WhatsApp', 'Mensagem', 'Página'], ...CONTATOS.map(c => [c.data, c.nome, c.tel, c.msg, c.pagina])];
+  const linhas = [['Data', 'Nome', 'WhatsApp', 'Mensagem', 'Página', 'Imóvel', 'Tipo', 'Região', 'Valor', 'Pesquisou', 'Status'], ...CONTATOS.map(c => [c.data, c.nome, c.tel, c.msg, c.pagina, c.imovel, c.tipo, c.regiao, c.valor, c.pesquisa, c.status])];
   const blob = new Blob(['﻿' + linhas.map(l => l.map(cel).join(';')).join('\r\n')], {type: 'text/csv;charset=utf-8'});
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
   const d = new Date(), p = n => String(n).padStart(2, '0');

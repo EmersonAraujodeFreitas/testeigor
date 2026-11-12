@@ -25,7 +25,7 @@ const ABAS = {
   Usuarios: ['id', 'usuario', 'nome', 'papel', 'status', 'salt', 'hash', 'criado', 'ultimoAcesso'],
   Posts:    ['id', 'tipo', 'titulo', 'categoria', 'cidade', 'resumo', 'etiqueta', 'preco', 'descricao', 'distancias', 'localTexto', 'mapa', 'ficha', 'situacao', 'formato', 'midias', 'status', 'destaque', 'ordem', 'autor', 'criado', 'atualizado', 'views', 'lat', 'lng', 'publicarEm'],
   Log:      ['data', 'usuario', 'acao', 'detalhe'],
-  Contatos: ['Data', 'Nome', 'WhatsApp', 'Mensagem', 'Página', 'Chamar no WhatsApp', 'Status', 'Obs'],
+  Contatos: ['Data', 'Nome', 'WhatsApp', 'Mensagem', 'Página', 'Chamar no WhatsApp', 'Status', 'Obs', 'Imóvel', 'Tipo', 'Região', 'Valor', 'Área', 'Pesquisou', 'Também viu', 'Link do imóvel'],
   Visitas:  ['Data', 'Imóvel', 'ImóvelId', 'Dia', 'Período', 'Nome', 'WhatsApp', 'Status', 'Obs']
 };
 const STATUS_CONTATO = ['Novo', 'Em atendimento', 'Visitou', 'Proposta', 'Fechou', 'Perdido'];
@@ -73,7 +73,13 @@ function contato(d) {
   limitar('ct_' + dig, 5, 600, 'Muitas mensagens deste número. Tente novamente em alguns minutos.');
   limitar('ct_total', 60, 600, 'Muitas mensagens no momento. Tente novamente em alguns minutos.');
   const responder = 'https://wa.me/55' + dig;
-  inserir('Contatos', { 'Data': agora(), 'Nome': nome, 'WhatsApp': tel, 'Mensagem': msg, 'Página': pagina, 'Chamar no WhatsApp': responder, 'Status': 'Novo', 'Obs': '' });
+  const it = (d.interesse && typeof d.interesse === 'object') ? d.interesse : {};
+  const I = { imovel: limpar(it.imovel, 120), tipo: limpar(it.tipo, 40), regiao: limpar(it.regiao, 80), valor: limpar(it.valor, 40), area: limpar(it.area, 40),
+    pesquisa: limpar(it.pesquisa, 160), vistos: limpar(it.vistos, 300), link: /^https:\/\/[\w.-]+\/\S*$/.test(String(it.link || '')) ? limpar(it.link, 200) : '' };
+  inserir('Contatos', { 'Data': agora(), 'Nome': nome, 'WhatsApp': tel, 'Mensagem': msg, 'Página': pagina, 'Chamar no WhatsApp': responder, 'Status': 'Novo', 'Obs': '',
+    'Imóvel': I.imovel, 'Tipo': I.tipo, 'Região': I.regiao, 'Valor': I.valor, 'Área': I.area, 'Pesquisou': I.pesquisa, 'Também viu': I.vistos, 'Link do imóvel': I.link });
+  const resumo = [I.imovel && '🏡 *Imóvel:* ' + I.imovel, (I.tipo || I.regiao) && '📍 *Tipo / região:* ' + [I.tipo, I.regiao].filter(Boolean).join(' · '),
+    I.valor && '💰 *Valor:* ' + I.valor, I.area && '📐 *Área:* ' + I.area, I.pesquisa && '🔎 *Pesquisou:* ' + I.pesquisa, I.link].filter(Boolean).join('\n');
   let extra = '';
   const v = d.visita;
   if (v && typeof v === 'object') {
@@ -83,7 +89,7 @@ function contato(d) {
       extra = '\n📅 *Pedido de visita:* ' + dia + ' (' + per + ') — ' + im;
     }
   }
-  notificar('🏡 *Novo contato pelo site*\n*Nome:* ' + nome + '\n*WhatsApp:* ' + tel + '\n*Página:* ' + pagina + extra + '\n\n' + msg + '\n\nResponder: ' + responder,
+  notificar('🏡 *Novo contato pelo site*\n*Nome:* ' + nome + '\n*WhatsApp:* ' + tel + '\n*Página:* ' + pagina + (resumo ? '\n' + resumo : '') + extra + '\n\n' + msg + '\n\nResponder: ' + responder,
     (extra ? 'Pedido de visita: ' : 'Novo contato pelo site: ') + nome);
 }
 function notificar(texto, assunto) {
@@ -295,7 +301,8 @@ function salvarConfig(d, eu) {
 }
 function contatos() {
   return { contatos: linhas('Contatos').slice(-500).reverse().map(c => ({ linha: c._linha, data: c['Data'], nome: c['Nome'], tel: c['WhatsApp'],
-    msg: c['Mensagem'], pagina: c['Página'], link: c['Chamar no WhatsApp'], status: c['Status'] || 'Novo', obs: c['Obs'] || '' })) };
+    msg: c['Mensagem'], pagina: c['Página'], link: c['Chamar no WhatsApp'], status: c['Status'] || 'Novo', obs: c['Obs'] || '',
+    imovel: c['Imóvel'] || '', tipo: c['Tipo'] || '', regiao: c['Região'] || '', valor: c['Valor'] || '', pesquisa: c['Pesquisou'] || '', linkImovel: c['Link do imóvel'] || '' })) };
 }
 function contatoStatus(d, eu) {
   const l = Number(d.linha), st = STATUS_CONTATO.indexOf(d.status) >= 0 ? d.status : null;
