@@ -462,8 +462,19 @@ function radarSVG(p, ds){
     <circle cx="${C}" cy="${C}" r="16" class="cp"/><circle cx="${C}" cy="${C}" r="7" class="cc"/>
   </svg>`;
 }
+// Lê distâncias escritas no texto, ex.: "70 km de Salvador (via balsa), 127 km de Ilhéus e 66 km de Itacaré"
+function distanciasDoTexto(t){
+  const out = [], re = /(\d+(?:[.,]\d+)?)\s*km\s+(?:de|do|da|até)\s+([A-ZÀ-Ý][\wÀ-ÿ'’-]*(?:\s+(?:de|do|da|dos|das)?\s*[A-ZÀ-Ý][\wÀ-ÿ'’-]*)*)/g;
+  let m; while ((m = re.exec(t || '')) && out.length < 6){ out.push({local: m[2].trim(), km: m[1].replace('.', ','), dir: ''}); }
+  return out;
+}
 function blocoLocal(p){
-  const ds = (p.distancias || []).filter(d => d.local && d.km);
+  let ds = (p.distancias || []).filter(d => d.local && d.km);
+  if (!ds.length) ds = distanciasDoTexto(p.localTexto);
+  // sem endereço informado, usa a localização do anúncio (aproximada)
+  const cid = (p.cidade || '').replace(/·/g, ',').trim();
+  const aprox = cid && /[\s,]/.test(cid) ? cid : [p.titulo, cid].filter(Boolean).join(', ');
+  p = Object.assign({}, p, {mapa: p.mapa || aprox});
   if (!ds.length && !p.mapa && !p.localTexto) return '';
   const ordem = [...ds].sort((a, b) => kmNum(a.km) - kmNum(b.km));
   const max = Math.max(...ds.map(d => kmNum(d.km)), 1);
