@@ -11,7 +11,7 @@ const CATEGORIAS = [
   {nome:'Loteamento', ico:'lote',    txt:'Lotes em loteamentos com potencial de valorização.'},
   {nome:'Sítio',      ico:'sitio',   txt:'Natureza, tranquilidade e espaço para produzir.'},
   {nome:'Chácara',    ico:'chacara', txt:'Lazer e descanso perto da cidade.'},
-  {nome:'Casa',       ico:'casa',    txt:'Casas para morar ou investir em toda a Bahia.'}
+  {nome:'Casa',       ico:'casa',    txt:'Casas para morar ou investir em todo o Brasil.'}
 ];
 
 /* ===== CATÁLOGO =====
@@ -640,9 +640,62 @@ function montarContato(){
   });
 }
 
+
+/* ===== VÍDEO DE FUNDO DA CAPA (clipes em sequência com transição) ===== */
+function iniciarVideoCapa(){
+  const hero = $('.hero-v'), box = $('.hvid'); if (!box) return;
+  const lista = (CONFIG.capa || []).filter(c => c && c.src); if (!lista.length) return;
+  const reduz = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const economia = navigator.connection && (navigator.connection.saveData || /2g/.test(navigator.connection.effectiveType || ''));
+  if (reduz || economia) return;
+  const vids = [...box.querySelectorAll('video')];
+  const seg = Math.max(4, +CONFIG.segundosPorClipe || 7) * 1000;
+  const qual = innerWidth < 720 ? '360' : '720';
+  const url = (c, q) => c.src.replace('{q}', q || qual);
+  const ui = $('.hvid-tema b'), dots = $('.hvid-dots');
+  dots.innerHTML = lista.map((c, k) => `<button type="button" aria-label="${esc(c.tema || 'Clipe ' + (k + 1))}" data-k="${k}"><i></i></button>`).join('');
+  let atual = 0, camada = 0, timer = null, falhas = 0, visivel = true, rodando = false;
+  const marcar = k => {
+    if (ui) ui.textContent = lista[k].tema || '';
+    dots.querySelectorAll('button').forEach((b, j) => { b.classList.toggle('on', j === k); b.style.setProperty('--t', seg + 'ms'); });
+  };
+  function carregar(v, k, cb){
+    let tentouBaixa = false;
+    v.onerror = () => {
+      if (!tentouBaixa && qual !== '360' && lista[k].src.includes('{q}')){ tentouBaixa = true; v.src = url(lista[k], '360'); v.load(); return; }
+      falhas++; if (falhas >= lista.length * 2) return parar(); cb(false);
+    };
+    v.oncanplay = () => { v.oncanplay = null; cb(true); };
+    v.src = url(lista[k]); v.load();
+  }
+  function mostrar(k){
+    const v = vids[camada], ant = vids[1 - camada];
+    carregar(v, k, ok => {
+      if (!ok){ atual = (k + 1) % lista.length; return mostrar(atual); }
+      falhas = 0;
+      v.currentTime = 0; const pr = v.play(); if (pr) pr.catch(() => {});
+      v.classList.add('on'); ant.classList.remove('on'); hero.classList.add('vid-on');
+      setTimeout(() => { ant.pause(); }, 1600);
+      marcar(k); atual = k;
+      clearTimeout(timer); timer = setTimeout(proximo, seg);
+    });
+  }
+  function proximo(){ if (!visivel) return; camada = 1 - camada; mostrar((atual + 1) % lista.length); }
+  function parar(){ clearTimeout(timer); vids.forEach(v => { v.pause(); v.removeAttribute('src'); v.load(); }); hero.classList.remove('vid-on'); $('.hvid-ui').hidden = true; }
+  dots.addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (!b) return; clearTimeout(timer); camada = 1 - camada; mostrar(+b.dataset.k); });
+  vids.forEach(v => { v.muted = true; v.loop = true; v.setAttribute('muted', ''); });
+  const retomar = () => { if (!visivel || document.hidden) { clearTimeout(timer); vids.forEach(v => v.pause()); return; }
+    if (!rodando){ rodando = true; return mostrar(0); }
+    const v = vids[camada]; const pr = v.play(); if (pr) pr.catch(() => {}); clearTimeout(timer); timer = setTimeout(proximo, seg); };
+  if ('IntersectionObserver' in window) new IntersectionObserver(es => { visivel = es[0].isIntersecting; retomar(); }, {threshold: .05}).observe(hero);
+  else retomar();
+  document.addEventListener('visibilitychange', retomar);
+}
+
 /* ===== GERAL ===== */
 function iniciar(){
   montarChat(); montarCategorias(); montarBusca(); montarContato();
+  iniciarVideoCapa();
 
   // Cadeado: carrega o painel administrativo só quando for usado
   document.addEventListener('click', e => {
@@ -716,11 +769,11 @@ const I18N = (() => {
     ['Início', 'Home', 'Inicio'], ['Imóveis', 'Properties', 'Inmuebles'], ['Categorias', 'Categories', 'Categorías'],
     ['Como funciona', 'How it works', 'Cómo funciona'], ['A empresa', 'About us', 'La empresa'], ['Dúvidas', 'FAQ', 'Preguntas'],
     ['Contato', 'Contact', 'Contacto'], ['Fale conosco', 'Contact us', 'Contáctenos'],
-    ['Imóveis em toda a Bahia', 'Properties all over Bahia', 'Inmuebles en todo Bahía'],
+    ['Imóveis em todo o Brasil', 'Properties all over Brazil', 'Inmuebles en todo Brasil'],
     ['Realizando sonhos,', 'Making dreams come true,', 'Realizando sueños,'], ['construindo futuro!', 'building the future!', '¡construyendo futuro!'],
     ['Terrenos, loteamentos, fazendas, sítios, chácaras e casas. Encontre o imóvel ideal e fale direto com a nossa equipe.', 'Land, lots, farms, small farms, country houses and homes. Find the ideal property and talk directly to our team.', 'Terrenos, loteos, haciendas, fincas, quintas y casas. Encuentre el inmueble ideal y hable directo con nuestro equipo.'],
     ['Ver imóveis à venda', 'See properties for sale', 'Ver inmuebles en venta'], ['Falar com um especialista', 'Talk to a specialist', 'Hablar con un especialista'],
-    ['Atuação em toda a Bahia', 'Serving all of Bahia', 'Presencia en todo Bahía'], ['Atendimento direto', 'Direct service', 'Atención directa'],
+    ['Atuação em todo o Brasil', 'Serving all of Brazil', 'Presencia en todo Brasil'], ['Atendimento direto', 'Direct service', 'Atención directa'],
     ['Informações claras de cada imóvel', 'Clear information on every property', 'Información clara de cada inmueble'],
     ['Encontre seu imóvel', 'Find your property', 'Encuentre su inmueble'], ['Veja na hora o que está disponível para venda.', 'Instantly see what is available for sale.', 'Vea al instante lo que está disponible para la venta.'],
     ['Tipo de imóvel', 'Property type', 'Tipo de inmueble'], ['Cidade ou região', 'City or region', 'Ciudad o región'], ['Investimento até', 'Budget up to', 'Inversión hasta'],
@@ -740,19 +793,19 @@ const I18N = (() => {
     ['Realize o negócio', 'Close the deal', 'Cierre el negocio'], ['Acompanhamos você até a conclusão, com transparência em cada etapa.', 'We support you until the end, with transparency at every step.', 'Lo acompañamos hasta el final, con transparencia en cada etapa.'],
     ['Sobre nós', 'About us', 'Sobre nosotros'], ['Grupo', 'Grupo', 'Grupo'], ['Bahia Imóveis', 'Bahia Imóveis', 'Bahia Imóveis'],
     ['Realizando sonhos, construindo futuro!', 'Making dreams come true, building the future!', '¡Realizando sueños, construyendo futuro!'],
-    ['Toda a Bahia', 'All of Bahia', 'Todo Bahía'], ['Área de atuação', 'Service area', 'Área de actuación'], ['6 categorias', '6 categories', '6 categorías'],
+    ['Todo o Brasil', 'All of Brazil', 'Todo Brasil'], ['Área de atuação', 'Service area', 'Área de actuación'], ['6 categorias', '6 categories', '6 categorías'],
     ['Rurais e urbanos', 'Rural and urban', 'Rurales y urbanos'], ['Direto', 'Direct', 'Directo'], ['Atendimento no WhatsApp', 'Service via WhatsApp', 'Atención por WhatsApp'],
-    ['Quem somos', 'Who we are', 'Quiénes somos'], ['Oportunidades imobiliárias', 'Real estate opportunities', 'Oportunidades inmobiliarias'], ['em toda a Bahia', 'all over Bahia', 'en todo Bahía'],
-    ['Atuamos com a divulgação de oportunidades imobiliárias em toda a Bahia, conforme a disponibilidade dos imóveis.', 'We showcase real estate opportunities all over Bahia, according to property availability.', 'Divulgamos oportunidades inmobiliarias en todo Bahía, según la disponibilidad de los inmuebles.'],
+    ['Quem somos', 'Who we are', 'Quiénes somos'], ['Oportunidades imobiliárias', 'Real estate opportunities', 'Oportunidades inmobiliarias'], ['em todo o Brasil', 'all over Brazil', 'en todo Brasil'],
+    ['Atuamos com a divulgação de oportunidades imobiliárias em todo o Brasil, conforme a disponibilidade dos imóveis.', 'We showcase real estate opportunities all over Brazil, according to property availability.', 'Divulgamos oportunidades inmobiliarias en todo Brasil, según la disponibilidad de los inmuebles.'],
     ['Imóveis rurais e urbanos: da fazenda produtiva à casa na cidade.', 'Rural and urban properties: from productive farms to homes in the city.', 'Inmuebles rurales y urbanos: de la hacienda productiva a la casa en la ciudad.'],
     ['Informações claras sobre cada propriedade antes da visita.', 'Clear information about each property before the visit.', 'Información clara sobre cada propiedad antes de la visita.'],
     ['Contato direto, sem intermediários desnecessários.', 'Direct contact, no unnecessary middlemen.', 'Contacto directo, sin intermediarios innecesarios.'],
-    ['Entre em contato', 'Get in touch', 'Contáctenos'], ['Para proprietários', 'For owners', 'Para propietarios'], ['Quer vender seu', 'Want to sell your', '¿Quiere vender su'], ['imóvel na Bahia?', 'property in Bahia?', 'inmueble en Bahía?'],
+    ['Entre em contato', 'Get in touch', 'Contáctenos'], ['Para proprietários', 'For owners', 'Para propietarios'], ['Quer vender seu', 'Want to sell your', '¿Quiere vender su'], ['imóvel no Brasil?', 'property in Brazil?', 'inmueble en Brasil?'],
     ['Fale com a gente e divulgue sua propriedade para quem está procurando.', 'Talk to us and show your property to people who are looking.', 'Hable con nosotros y divulgue su propiedad a quien está buscando.'],
     ['Anunciar meu imóvel', 'List my property', 'Anunciar mi inmueble'], ['Dúvidas frequentes', 'Frequently asked questions', 'Preguntas frecuentes'], ['Perguntas', 'Common', 'Preguntas'], ['comuns', 'questions', 'comunes'],
     ['Não encontrou sua resposta? Fale com a gente pelo chat.', "Didn't find your answer? Talk to us on the chat.", '¿No encontró su respuesta? Hable con nosotros por el chat.'],
     ['Em quais regiões vocês atuam?', 'Which regions do you serve?', '¿En qué regiones actúan?'],
-    ['Atuamos com oportunidades em toda a Bahia. Use a busca por cidade ou fale com a gente.', 'We have opportunities all over Bahia. Search by city or talk to us.', 'Tenemos oportunidades en todo Bahía. Busque por ciudad o hable con nosotros.'],
+    ['Atuamos com oportunidades em todo o Brasil. Use a busca por cidade ou fale com a gente.', 'We have opportunities all over Brazil. Search by city or talk to us.', 'Tenemos oportunidades en todo Brasil. Busque por ciudad o hable con nosotros.'],
     ['Quais tipos de imóvel vocês trabalham?', 'What types of property do you work with?', '¿Con qué tipos de inmuebles trabajan?'],
     ['Fazendas, terrenos, loteamentos, sítios, chácaras e casas, além de outros imóveis conforme a disponibilidade.', 'Farms, land, lots, small farms, country houses and homes, plus other properties according to availability.', 'Haciendas, terrenos, loteos, fincas, quintas y casas, además de otros inmuebles según disponibilidad.'],
     ['Como vejo o que está disponível?', 'How do I see what is available?', '¿Cómo veo lo que está disponible?'],
@@ -766,10 +819,10 @@ const I18N = (() => {
     ['Resposta no seu WhatsApp', 'Reply on your WhatsApp', 'Respuesta por WhatsApp'], ['Retornamos pelo número que você informar', 'We reply to the number you provide', 'Respondemos al número que usted indique'],
     ['Envie sua mensagem', 'Send your message', 'Envíe su mensaje'], ['Todos os campos são obrigatórios.', 'All fields are required.', 'Todos los campos son obligatorios.'],
     ['Nome', 'Name', 'Nombre'], ['Mensagem', 'Message', 'Mensaje'], ['Enviar mensagem', 'Send message', 'Enviar mensaje'],
-    ['Procurando um imóvel', 'Looking for a property', '¿Busca un inmueble'], ['na Bahia?', 'in Bahia?', 'en Bahía?'],
+    ['Procurando um imóvel', 'Looking for a property', '¿Busca un inmueble'], ['no Brasil?', 'in Brazil?', 'en Brasil?'],
     ['Conte o que você procura. A nossa equipe responde no seu WhatsApp.', 'Tell us what you are looking for. Our team will reply on your WhatsApp.', 'Cuéntenos lo que busca. Nuestro equipo le responde por WhatsApp.'],
     ['Ver imóveis', 'See properties', 'Ver inmuebles'],
-    ['Realizando sonhos, construindo futuro! Fazendas, terrenos, loteamentos, sítios, chácaras e casas em toda a Bahia.', 'Making dreams come true, building the future! Farms, land, lots, small farms, country houses and homes all over Bahia.', '¡Realizando sueños, construyendo futuro! Haciendas, terrenos, loteos, fincas, quintas y casas en todo Bahía.'],
+    ['Realizando sonhos, construindo futuro! Fazendas, terrenos, loteamentos, sítios, chácaras e casas em todo o Brasil.', 'Making dreams come true, building the future! Farms, land, lots, small farms, country houses and homes all over Brazil.', '¡Realizando sueños, construyendo futuro! Haciendas, terrenos, loteos, fincas, quintas y casas en todo Brasil.'],
     ['Navegação', 'Navigation', 'Navegación'], ['Atendimento', 'Support', 'Atención'],
     ['Grupo Bahia Imóveis. Todos os direitos reservados.', 'Grupo Bahia Imóveis. All rights reserved.', 'Grupo Bahia Imóveis. Todos los derechos reservados.'],
     ['Área restrita', 'Restricted area', 'Área restringida'], ['Grupo Bahia Imóveis — início', 'Grupo Bahia Imóveis — home', 'Grupo Bahia Imóveis — inicio'], ['Abrir menu', 'Open menu', 'Abrir menú'],
@@ -784,7 +837,7 @@ const I18N = (() => {
     ['Lotes em loteamentos com potencial de valorização.', 'Lots in subdivisions with appreciation potential.', 'Lotes en loteos con potencial de valorización.'],
     ['Natureza, tranquilidade e espaço para produzir.', 'Nature, peace and space to produce.', 'Naturaleza, tranquilidad y espacio para producir.'],
     ['Lazer e descanso perto da cidade.', 'Leisure and rest close to the city.', 'Ocio y descanso cerca de la ciudad.'],
-    ['Casas para morar ou investir em toda a Bahia.', 'Homes to live in or invest all over Bahia.', 'Casas para vivir o invertir en todo Bahía.'],
+    ['Casas para morar ou investir em todo o Brasil.', 'Homes to live in or invest all over Brazil.', 'Casas para vivir o invertir en todo Brasil.'],
     // busca e vitrine
     ['Todos os tipos', 'All types', 'Todos los tipos'], ['Sem limite', 'No limit', 'Sin límite'], ['Todos', 'All', 'Todos'],
     ['R$ 100 mil', 'R$ 100 thousand', 'R$ 100 mil'], ['R$ 250 mil', 'R$ 250 thousand', 'R$ 250 mil'], ['R$ 500 mil', 'R$ 500 thousand', 'R$ 500 mil'],
@@ -824,7 +877,7 @@ const I18N = (() => {
     ['Agende sua visita', 'Schedule your visit', 'Agende su visita'],
     ['Fale com a nossa equipe para consultar disponibilidade e combinar os detalhes.', 'Talk to our team to check availability and arrange the details.', 'Hable con nuestro equipo para consultar disponibilidad y combinar los detalles.'],
     ['Agendar pelo chat ↗', 'Schedule via chat ↗', 'Agendar por el chat ↗'], ['Continue explorando', 'Keep exploring', 'Siga explorando'], ['Imóveis similares', 'Similar properties', 'Inmuebles similares'],
-    ['No momento, não há outro imóvel do mesmo tipo no site. Conheça também estas opções na Bahia.', 'There is no other property of the same type right now. See these other options in Bahia.', 'Por ahora no hay otro inmueble del mismo tipo. Conozca también estas opciones en Bahía.'],
+    ['No momento, não há outro imóvel do mesmo tipo no site. Conheça também estas opções no Brasil.', 'There is no other property of the same type right now. See these other options in Brazil.', 'Por ahora no hay otro inmueble del mismo tipo. Conozca también estas opciones en Brasil.'],
     ['Sem mídia', 'No media', 'Sin multimedia'],
     // chat
     ['Atendimento pelo WhatsApp', 'Support via WhatsApp', 'Atención por WhatsApp'], ['Seu WhatsApp', 'Your WhatsApp', 'Su WhatsApp'], ['alterar', 'change', 'cambiar'],
@@ -833,6 +886,7 @@ const I18N = (() => {
     ['Digite seu nome.', 'Please enter your name.', 'Escriba su nombre.'], ['Digite seu WhatsApp com DDD. Ex.: (71) 99999-9999', 'Enter your WhatsApp with area code. E.g.: (71) 99999-9999', 'Escriba su WhatsApp con código de área. Ej.: (71) 99999-9999'],
     ['Digite sua mensagem.', 'Please type your message.', 'Escriba su mensaje.'], ['Não conseguimos enviar agora. Tente novamente em instantes.', "We couldn't send it now. Please try again shortly.", 'No pudimos enviar ahora. Intente de nuevo en unos instantes.'],
     ['Abrimos o WhatsApp com sua mensagem pronta, é só tocar em enviar.', 'We opened WhatsApp with your message ready, just tap send.', 'Abrimos WhatsApp con su mensaje listo, solo toque en enviar.'],
+    ['Praias', 'Beaches', 'Playas'], ['Terrenos com lago', 'Land with lakes', 'Terrenos con lago'], ['Fazendas', 'Farms', 'Haciendas'], ['Litoral', 'Coastline', 'Litoral'], ['Rios e natureza', 'Rivers and nature', 'Ríos y naturaleza'],
     ['Ver as fotos', 'See the photos', 'Ver las fotos'], ['Assistir ao vídeo', 'Watch the video', 'Ver el video'], ['Valor', 'Price', 'Valor'],
     ['Sobre o imóvel', 'About the property', 'Sobre el inmueble'], ['Conheça', 'Discover', 'Conozca'], ['cada detalhe', 'every detail', 'cada detalle'], ['os detalhes', 'the details', 'los detalles'],
     ['Galeria', 'Gallery', 'Galería'], ['Fotos e vídeos', 'Photos and videos', 'Fotos y videos'],

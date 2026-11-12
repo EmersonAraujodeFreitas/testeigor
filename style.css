@@ -798,4 +798,29 @@ button.restrito.loading svg{animation:gira .8s linear infinite}
 .top.c3 .lang svg{width:20px;height:14px}
 .top.c3 .wrap.nav{padding-left:16px;padding-right:16px}
 
+/* ===== V16: vídeo de fundo na capa ===== */
+.hvid{position:absolute;inset:0;z-index:-2;overflow:hidden;background:#1d2024}
+.hvid video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transform:scale(1.04);transition:opacity 1.5s ease,transform 9s linear}
+.hvid video.on{opacity:1;transform:scale(1)}
+.hvid::after{content:"";position:absolute;inset:0;background:
+  linear-gradient(90deg,#282d33e6 0%,#282d33b3 38%,#282d3340 72%,#282d3326 100%),
+  linear-gradient(180deg,#282d3399 0%,#282d3300 22%,#282d3300 70%,#282d33 100%)}
+.hero-v .topo{transition:opacity 1s}
+.hero-v.vid-on .topo{opacity:0}
+.hero-v.vid-on::before{opacity:0}
+.hero-v::before{transition:opacity 1.2s}
+.hvid-ui{position:absolute;left:0;right:0;bottom:26px;z-index:1;pointer-events:none;opacity:0;transition:opacity .8s}
+.hero-v.vid-on .hvid-ui{opacity:1}
+.hvid-ui .wrap{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.hvid-tema{display:inline-flex;align-items:center;gap:10px;font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#f3ede2;text-shadow:0 1px 8px #0009}
+.hvid-tema i{width:8px;height:8px;border-radius:50%;background:#e04b3f;box-shadow:0 0 0 4px #e04b3f33;animation:pulsa2 1.6s ease-in-out infinite}
+@keyframes pulsa2{50%{box-shadow:0 0 0 7px #e04b3f00}}
+.hvid-dots{display:flex;gap:8px;pointer-events:auto}
+.hvid-dots button{width:34px;height:14px;padding:5px 0;border:0;background:none;cursor:pointer}
+.hvid-dots i{display:block;height:3px;border-radius:3px;background:#ffffff40;position:relative;overflow:hidden}
+.hvid-dots button.on i::after{content:"";position:absolute;inset:0;background:var(--gold2);transform-origin:left;animation:barra var(--t,7000ms) linear forwards}
+@keyframes barra{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@media(max-width:620px){.hvid-ui{bottom:14px}.hvid-dots button{width:22px}.hvid::after{background:linear-gradient(180deg,#282d33b3 0%,#282d3366 40%,#282d33cc 75%,#282d33 100%)}}
+@media (prefers-reduced-motion:reduce){.hvid{display:none}}
+
 @media(max-width:620px){.menu{top:84px}}

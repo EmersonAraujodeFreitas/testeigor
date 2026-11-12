@@ -1,4 +1,4 @@
-GRUPO BAHIA IMÓVEIS — SITE V13 + PAINEL ADMINISTRATIVO
+GRUPO BAHIA IMÓVEIS — SITE V16 + PAINEL ADMINISTRATIVO
 =====================================================
 
 ARQUIVOS PARA O GITHUB (pasta 1-github: enviar os 7 arquivos soltos na raiz do repositório)
@@ -19,6 +19,9 @@ COMO O SITE FUNCIONA
   - Idiomas: bandeiras no topo (Português, English, Español). Traduzem todo o site, o chat e os
     rótulos das publicações. O texto que você escreve em cada publicação aparece como foi digitado.
   - Painel administrativo: link "Área restrita" no rodapé do site.
+  - Vídeo de fundo do início: clipes em sequência (Praias, Terrenos com lago, Fazendas, Litoral,
+    Rios e natureza), de banco gratuito Mixkit (uso comercial liberado, sem crédito obrigatório).
+    Para trocar por vídeos próprios: envie os .mp4 ao GitHub e edite a lista "capa" no config.js.
 
 ------------------------------------------------------------
 LIGAR O PAINEL E O CHAT (uma vez só, ~15 minutos, gratuito)
