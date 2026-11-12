@@ -378,6 +378,7 @@ function abrirImovel(id){
           <div class="vis-or"><span>ou</span></div>
           <button class="btn btn-ghost w100" data-chat="${interesse}">Tirar uma dúvida</button>
           <a class="vis-tel" href="#" data-chat="${interesse}"><svg><use href="#i-wa"/></svg>(71) 99602-0606</a>
+          <div class="vis-cnpj"><svg><use href="#i-shield"/></svg>Grupo Bahia Imóveis · CNPJ 00.987.899/0001-88</div>
         </div>
       </aside>
     </div>
@@ -826,7 +827,7 @@ const I18N = (() => {
     ['Ver imóveis', 'See properties', 'Ver inmuebles'],
     ['Realizando sonhos, construindo futuro! Fazendas, terrenos, loteamentos, sítios, chácaras e casas em todo o Brasil.', 'Making dreams come true, building the future! Farms, land, lots, small farms, country houses and homes all over Brazil.', '¡Realizando sueños, construyendo futuro! Haciendas, terrenos, loteos, fincas, quintas y casas en todo Brasil.'],
     ['Navegação', 'Navigation', 'Navegación'], ['Atendimento', 'Support', 'Atención'],
-    ['Grupo Bahia Imóveis. Todos os direitos reservados.', 'Grupo Bahia Imóveis. All rights reserved.', 'Grupo Bahia Imóveis. Todos los derechos reservados.'],
+    ['Grupo Bahia Imóveis. Todos os direitos reservados.', 'Grupo Bahia Imóveis. All rights reserved.', 'Grupo Bahia Imóveis. Todos los derechos reservados.'], ['Grupo Bahia Imóveis · CNPJ 00.987.899/0001-88. Todos os direitos reservados.', 'Grupo Bahia Imóveis · CNPJ 00.987.899/0001-88. All rights reserved.', 'Grupo Bahia Imóveis · CNPJ 00.987.899/0001-88. Todos los derechos reservados.'],
     ['Área restrita', 'Restricted area', 'Área restringida'], ['Grupo Bahia Imóveis — início', 'Grupo Bahia Imóveis — home', 'Grupo Bahia Imóveis — inicio'], ['Abrir menu', 'Open menu', 'Abrir menú'],
     ['Ex.: Salvador, Feira de Santana', 'E.g.: Salvador, Feira de Santana', 'Ej.: Salvador, Feira de Santana'], ['Digite a cidade', 'Type the city', 'Escriba la ciudad'],
     ['Seu nome', 'Your name', 'Su nombre'], ['Conte o que você procura ou o que deseja saber', 'Tell us what you are looking for or want to know', 'Cuéntenos lo que busca o lo que desea saber'],
@@ -888,6 +889,7 @@ const I18N = (() => {
     ['Digite seu nome.', 'Please enter your name.', 'Escriba su nombre.'], ['Digite seu WhatsApp com DDD. Ex.: (71) 99999-9999', 'Enter your WhatsApp with area code. E.g.: (71) 99999-9999', 'Escriba su WhatsApp con código de área. Ej.: (71) 99999-9999'],
     ['Digite sua mensagem.', 'Please type your message.', 'Escriba su mensaje.'], ['Não conseguimos enviar agora. Tente novamente em instantes.', "We couldn't send it now. Please try again shortly.", 'No pudimos enviar ahora. Intente de nuevo en unos instantes.'],
     ['Abrimos o WhatsApp com sua mensagem pronta, é só tocar em enviar.', 'We opened WhatsApp with your message ready, just tap send.', 'Abrimos WhatsApp con su mensaje listo, solo toque en enviar.'],
+    ['Empresa registrada', 'Registered company', 'Empresa registrada'],
     ['Praias', 'Beaches', 'Playas'], ['Terrenos com lago', 'Land with lakes', 'Terrenos con lago'], ['Fazendas', 'Farms', 'Haciendas'], ['Litoral', 'Coastline', 'Litoral'], ['Rios e natureza', 'Rivers and nature', 'Ríos y naturaleza'],
     ['Ver as fotos', 'See the photos', 'Ver las fotos'], ['Assistir ao vídeo', 'Watch the video', 'Ver el video'], ['Valor', 'Price', 'Valor'],
     ['Sobre o imóvel', 'About the property', 'Sobre el inmueble'], ['Conheça', 'Discover', 'Conozca'], ['cada detalhe', 'every detail', 'cada detalle'], ['os detalhes', 'the details', 'los detalles'],

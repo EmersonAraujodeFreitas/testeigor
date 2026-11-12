@@ -840,5 +840,12 @@ button.restrito.loading svg{animation:gira .8s linear infinite}
 .hero-v.vid-on .finder{background:linear-gradient(180deg,#2b3036e6,#363c43e6);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 @media(max-width:620px){.hvid::after{background:linear-gradient(180deg,#282d3390 0%,#282d3340 35%,#282d3399 72%,#282d33 100%)}}
 .hero-v.vid-on h1 .gold{text-shadow:none;filter:drop-shadow(0 2px 8px #000000b3)}
+/* CNPJ */
+.cnpj{display:inline-flex;align-items:center;gap:10px;margin-top:18px;padding:10px 14px;border-radius:12px;background:#ffffff08;border:1px solid var(--line2)}
+.cnpj svg{width:20px;height:20px;color:var(--gold);flex:none}
+.cnpj span{font-size:14px;font-weight:700;color:var(--text);letter-spacing:.02em}
+.cnpj small{display:block;font-size:10.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:1px}
+.vis-cnpj{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line2);font-size:12px;color:var(--muted)}
+.vis-cnpj svg{width:14px;height:14px;color:var(--gold)}
 
 @media(max-width:620px){.menu{top:84px}}
