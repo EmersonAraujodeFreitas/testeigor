@@ -74,12 +74,12 @@ function resumoInteresse(){
   const L = [], p = window.IMOVEL_ATUAL, I = {};
   const desc = x => [catDe(x), x.cidade].filter(Boolean).join(' · ');
   if (p){
-    L.push('🏡 *Imóvel de interesse:* ' + p.titulo);
-    const d = desc(p); if (d) L.push('📍 *Tipo / região:* ' + d);
-    if (p.preco) L.push('💰 *Valor:* ' + p.preco);
+    L.push('*Imóvel de interesse:* ' + p.titulo);
+    const d = desc(p); if (d) L.push('*Tipo / região:* ' + d);
+    if (p.preco) L.push('*Valor:* ' + p.preco);
     const area = (p.ficha || []).find(f => /área|area|hectare/i.test(f.rotulo || ''));
-    if (area && area.valor) L.push('📐 *Área:* ' + area.valor);
-    if (!/^fixo/.test(p.id)) L.push('🔗 ' + linkImovel(p.id));
+    if (area && area.valor) L.push('*Área:* ' + area.valor);
+    if (!/^fixo/.test(p.id)) L.push('*Link:* ' + linkImovel(p.id));
     Object.assign(I, {imovel: p.titulo, tipo: catDe(p), regiao: p.cidade || '', valor: p.preco || '', area: (area && area.valor) || '', link: /^fixo/.test(p.id) ? '' : linkImovel(p.id)});
   }
   const campo = id => { const e = $('#' + id); return e ? String(e.value || '').trim() : ''; };
@@ -87,17 +87,17 @@ function resumoInteresse(){
   const regiao = FILTRO.cidade || campo('iCidade') || campo('fCidade');
   const valor = FILTRO.max ? (VALORES.find(v => v[2] === FILTRO.max) || ['', ''])[1] : '';
   const busca = [tipo && 'Tipo: ' + tipo, regiao && 'Região: ' + regiao, valor && 'Até ' + valor, FILTRO.fav && 'Favoritos'].filter(Boolean);
-  if (busca.length) L.push('🔎 *Pesquisou:* ' + busca.join(' · '));
+  if (busca.length) L.push('*Pesquisou:* ' + busca.join(' · '));
   I.pesquisa = busca.join(' · ');
   if (!I.tipo) I.tipo = tipo || ''; if (!I.regiao) I.regiao = regiao || ''; if (!I.valor && valor) I.valor = 'Até ' + valor;
   const vistos = (store.get('gbi-vistos') || []).filter(id => !p || id !== p.id).map(id => POSTS.find(x => x.id === id)).filter(Boolean).slice(0, 3);
   I.vistos = vistos.map(x => x.titulo).join('; ');
-  if (vistos.length) L.push('👀 *Também viu:* ' + vistos.map(x => x.titulo + (desc(x) ? ' (' + desc(x) + ')' : '')).join('; '));
+  if (vistos.length) L.push('*Também viu:* ' + vistos.map(x => x.titulo + (desc(x) ? ' (' + desc(x) + ')' : '')).join('; '));
   const favs = (store.get('gbi-fav') || []).map(id => POSTS.find(x => x.id === id)).filter(Boolean).slice(0, 3);
-  if (favs.length) L.push('❤️ *Favoritos:* ' + favs.map(x => x.titulo).join('; '));
+  if (favs.length) L.push('*Favoritos:* ' + favs.map(x => x.titulo).join('; '));
   const v = window.VISITA_PENDENTE;
-  if (v && v.dia) L.push('📅 *Quer visitar:* ' + v.dia + (v.periodo ? ' · ' + v.periodo : ''));
-  if (!L.length) L.push('📄 *Página:* ' + pagina());
+  if (v && v.dia) L.push('*Quer visitar:* ' + v.dia + (v.periodo ? ' · ' + v.periodo : ''));
+  if (!L.length) L.push('*Página:* ' + pagina());
   L.info = I;
   return L;
 }
@@ -116,8 +116,8 @@ async function enviarContato({nome, telefone, mensagem}){
   dados.interesse = resumo.info;            // vai em colunas separadas na planilha
   dados.resumo = resumo.join('\n').replace(/\*/g, '');
   // 1) abre o WhatsApp da empresa com a mensagem resumida (no mesmo clique, para o navegador não bloquear)
-  const texto = `Olá! Vim pelo site do Grupo Bahia Imóveis.\n\n👤 *Nome:* ${nome}\n📱 *WhatsApp:* ${dados.telefone}\n${resumo.join('\n')}\n\n💬 *Mensagem:* ${mensagem}`;
-  const link = waLink(CONFIG.whatsapp, texto);
+  const texto = `Olá! Vim pelo site do Grupo Bahia Imóveis.\n\n*Nome:* ${nome}\n*WhatsApp:* ${dados.telefone}\n${resumo.join('\n')}\n\n*Mensagem:* ${mensagem}`;
+  const link = 'https://api.whatsapp.com/send?phone=' + CONFIG.whatsapp + '&text=' + encodeURIComponent(texto);
   const aba = window.open(link, '_blank');
   if (aba) { try { aba.opener = null; } catch(_){} } else location.href = link;
   // 2) registra o contato no painel (planilha), sem atrasar o cliente
