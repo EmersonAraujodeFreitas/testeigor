@@ -308,7 +308,7 @@ main{min-height:60vh}
 
 @media(max-width:1180px){.menu a{padding:10px 9px;font-size:13.5px}.menu a.active::after{left:9px;right:9px}}
 @media(max-width:1020px){.contact{grid-template-columns:1fr}.links3{grid-template-columns:1fr}}
-@media(max-width:1340px){
+@media(max-width:1024px){
   .burger{display:flex}
   .menu{position:fixed;top:100px;left:0;right:0;flex-direction:column;align-items:stretch;gap:4px;padding:16px 20px 24px;background:#282d33f7;border-bottom:1px solid var(--line);transform:translateY(-12px);opacity:0;pointer-events:none;transition:.25s}
   .open .menu{transform:none;opacity:1;pointer-events:auto}
@@ -323,7 +323,7 @@ main{min-height:60vh}
   .chat{right:12px;left:12px;width:auto;max-width:none;bottom:84px;max-height:calc(100dvh - 110px)}
   .chat-f .two{grid-template-columns:1fr}
 }
-@media(max-width:1340px){.menu{background:#282d33!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;max-height:calc(100dvh - 84px);overflow:auto}.top.open{backdrop-filter:none;-webkit-backdrop-filter:none;background:#282d33}}
+@media(max-width:1024px){.menu{background:#282d33!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;max-height:calc(100dvh - 84px);overflow:auto}.top.open{backdrop-filter:none;-webkit-backdrop-filter:none;background:#282d33}}
 
 /* ===== V9: página única, vitrine e página do imóvel ===== */
 .tab[hidden]{display:none!important}
@@ -635,11 +635,10 @@ button.restrito.loading svg{animation:gira .8s linear infinite}
 .lang button:hover{opacity:1;transform:translateY(-1px)}
 .lang button.on{opacity:1;border-color:#d9ad5fcc;background:#d9ad5f14}
 .lang svg{width:28px;height:19px;border-radius:3px;box-shadow:0 0 0 1px #0005}
-@media(max-width:1340px){.nav .lang{margin-left:auto;margin-right:6px}}
+@media(max-width:1024px){.nav .lang{margin-left:auto;margin-right:6px}}
 @media(max-width:620px){.lang button{padding:4px}.lang svg{width:24px;height:16px}.lang{gap:2px}}
 
 .menu a,.menu .btn{white-space:nowrap}
-@media(min-width:1341px) and (max-width:1440px){.menu a{padding:10px 10px;font-size:13.5px}.menu a.active::after{left:10px;right:10px}}
 
 /* ===== V15: nova página do imóvel ===== */
 .detalhe{padding:0 0 0}
@@ -779,16 +778,24 @@ button.restrito.loading svg{animation:gira .8s linear infinite}
 .nav .brand img{height:74px;width:auto;max-width:none;flex-shrink:0;object-fit:contain;aspect-ratio:800/294}
 .nav{gap:18px}
 .menu{flex:0 1 auto;min-width:0}
-@media(min-width:1341px) and (max-width:1520px){.menu a{padding:10px 9px;font-size:13.5px}.menu a.active::after{left:9px;right:9px}.menu .btn{padding:11px 16px;margin-left:6px}.nav .brand img{height:66px}}
 @media(max-width:620px){.nav .brand img{height:58px}}
-/* Menu recolhe sozinho quando não cabe (definido pelo script) */
+/* Menu sempre completo no computador: compacta em níveis quando o espaço aperta */
 .menu{flex:0 0 auto}
-.top.mob .burger{display:flex}
-.top.mob .menu{position:fixed;top:100px;left:0;right:0;flex-direction:column;align-items:stretch;gap:4px;padding:16px 20px 24px;background:#282d33;border-bottom:1px solid var(--line);transform:translateY(-12px);opacity:0;pointer-events:none;transition:.25s;max-height:calc(100dvh - 100px);overflow:auto;backdrop-filter:none;-webkit-backdrop-filter:none}
-.top.mob.open .menu{transform:none;opacity:1;pointer-events:auto}
-.top.mob .menu a{padding:14px 12px;font-size:16px}
-.top.mob .menu a.active::after{left:0;right:auto;top:12px;bottom:12px;width:3px;height:auto}
-.top.mob .menu .btn{margin:10px 0 0}
-.top.mob .lang{margin-left:auto;margin-right:6px}
+.top.c1 .nav{gap:12px}
+.top.c1 .menu a{padding:9px 8px;font-size:13px}.top.c1 .menu a.active::after{left:8px;right:8px}
+.top.c1 .menu .btn{padding:10px 14px;font-size:13px;margin-left:6px}
+.top.c1 .nav .brand img{height:64px}
+.top.c1 .lang svg{width:24px;height:16px}.top.c1 .lang button{padding:4px}
+.top.c2 .nav{gap:8px}
+.top.c2 .menu a{padding:8px 6px;font-size:12.5px}.top.c2 .menu a.active::after{left:6px;right:6px}
+.top.c2 .menu .btn{padding:9px 12px;font-size:12.5px;margin-left:4px;gap:6px}.top.c2 .menu .btn svg{width:15px;height:15px}
+.top.c2 .nav .brand img{height:56px}
+.top.c2 .lang{gap:0;margin-left:2px}.top.c2 .lang svg{width:22px;height:15px}.top.c2 .lang button{padding:3px}
+.top.c3 .nav{gap:6px}
+.top.c3 .menu a{padding:8px 5px;font-size:12px}.top.c3 .menu a.active::after{left:5px;right:5px}
+.top.c3 .menu .btn{padding:8px 10px;font-size:12px;margin-left:2px}
+.top.c3 .nav .brand img{height:50px}
+.top.c3 .lang svg{width:20px;height:14px}
+.top.c3 .wrap.nav{padding-left:16px;padding-right:16px}
 
 @media(max-width:620px){.menu{top:84px}}

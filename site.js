@@ -671,14 +671,19 @@ function iniciar(){
   });
   carregarPosts().then(() => { carregado = true; montarDestaques(); if (!$('.tab[data-aba="imoveis"]').hidden) desenharImoveis(); });
 
-  // Menu: recolhe para o botão ☰ sempre que os itens não couberem na largura
+  // Menu sempre completo no computador: se não couber, compacta em níveis (c1, c2, c3)
   const ajustarMenu = () => {
     const top = $('#top'), nav = $('.nav'), menu = $('#menu'), brand = $('.brand'), lang = $('.lang');
-    top.classList.remove('mob');
+    top.classList.remove('c1', 'c2', 'c3');
     if (getComputedStyle($('#burger')).display !== 'none') return;
-    const gap = parseFloat(getComputedStyle(nav).columnGap) || 18;
-    const precisa = brand.offsetWidth + menu.scrollWidth + (lang ? lang.offsetWidth : 0) + gap * 3;
-    if (precisa > nav.clientWidth) top.classList.add('mob');
+    const cabe = () => {
+      const cs = getComputedStyle(nav), gap = parseFloat(cs.columnGap) || 0;
+      const livre = nav.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const ml = lang ? parseFloat(getComputedStyle(lang).marginLeft) || 0 : 0;
+      const usado = brand.offsetWidth + menu.scrollWidth + (lang ? lang.offsetWidth + ml : 0) + gap * 2 + 8;
+      return usado <= livre;
+    };
+    for (const nivel of ['c1', 'c2', 'c3']){ if (cabe()) return; top.classList.remove('c1', 'c2', 'c3'); top.classList.add(nivel); }
   };
   window.ajustarMenu = ajustarMenu;
   addEventListener('resize', ajustarMenu);
