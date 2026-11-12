@@ -1,4 +1,4 @@
-GRUPO BAHIA IMÓVEIS — SITE V12 + PAINEL ADMINISTRATIVO
+GRUPO BAHIA IMÓVEIS — SITE V13 + PAINEL ADMINISTRATIVO
 =====================================================
 
 ARQUIVOS PARA O GITHUB (pasta 1-github: enviar os 7 arquivos soltos na raiz do repositório)
@@ -16,6 +16,9 @@ COMO O SITE FUNCIONA
   - Cada imóvel abre uma página com galeria de fotos/vídeos, descrição, quadro
     "Gostou deste imóvel?", localização com distâncias, "Agende sua visita" e imóveis similares.
   - O chat (botão verde) exige nome e WhatsApp para enviar.
+  - Idiomas: bandeiras no topo (Português, English, Español). Traduzem todo o site, o chat e os
+    rótulos das publicações. O texto que você escreve em cada publicação aparece como foi digitado.
+  - Painel administrativo: link "Área restrita" no rodapé do site.
 
 ------------------------------------------------------------
 LIGAR O PAINEL E O CHAT (uma vez só, ~15 minutos, gratuito)
