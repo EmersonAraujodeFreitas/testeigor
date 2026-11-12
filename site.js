@@ -69,6 +69,33 @@ const pagina = () => document.body.dataset.page || 'Início';
 const hora = () => new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
 
 /* ===== ENVIO DE MENSAGENS ===== */
+/* Resumo do interesse do cliente: imóvel que está vendo, pesquisa feita e o que já olhou */
+function resumoInteresse(){
+  const L = [], p = window.IMOVEL_ATUAL;
+  const desc = x => [catDe(x), x.cidade].filter(Boolean).join(' · ');
+  if (p){
+    L.push('🏡 *Imóvel de interesse:* ' + p.titulo);
+    const d = desc(p); if (d) L.push('📍 *Tipo / região:* ' + d);
+    if (p.preco) L.push('💰 *Valor:* ' + p.preco);
+    const area = (p.ficha || []).find(f => /área|area|hectare/i.test(f.rotulo || ''));
+    if (area && area.valor) L.push('📐 *Área:* ' + area.valor);
+    if (!/^fixo/.test(p.id)) L.push('🔗 ' + linkImovel(p.id));
+  }
+  const campo = id => { const e = $('#' + id); return e ? String(e.value || '').trim() : ''; };
+  const tipo = FILTRO.categoria || campo('iTipo') || campo('fTipo');
+  const regiao = FILTRO.cidade || campo('iCidade') || campo('fCidade');
+  const valor = FILTRO.max ? (VALORES.find(v => v[2] === FILTRO.max) || ['', ''])[1] : '';
+  const busca = [tipo && 'Tipo: ' + tipo, regiao && 'Região: ' + regiao, valor && 'Até ' + valor, FILTRO.fav && 'Favoritos'].filter(Boolean);
+  if (busca.length) L.push('🔎 *Pesquisou:* ' + busca.join(' · '));
+  const vistos = (store.get('gbi-vistos') || []).filter(id => !p || id !== p.id).map(id => POSTS.find(x => x.id === id)).filter(Boolean).slice(0, 3);
+  if (vistos.length) L.push('👀 *Também viu:* ' + vistos.map(x => x.titulo + (desc(x) ? ' (' + desc(x) + ')' : '')).join('; '));
+  const favs = (store.get('gbi-fav') || []).map(id => POSTS.find(x => x.id === id)).filter(Boolean).slice(0, 3);
+  if (favs.length) L.push('❤️ *Favoritos:* ' + favs.map(x => x.titulo).join('; '));
+  const v = window.VISITA_PENDENTE;
+  if (v && v.dia) L.push('📅 *Quer visitar:* ' + v.dia + (v.periodo ? ' · ' + v.periodo : ''));
+  if (!L.length) L.push('📄 *Página:* ' + pagina());
+  return L;
+}
 async function enviarContato({nome, telefone, mensagem}){
   const tel = soDigitos(telefone);
   const dados = {
@@ -77,9 +104,13 @@ async function enviarContato({nome, telefone, mensagem}){
     data: new Date().toLocaleString('pt-BR'),
     visita: /visita/i.test(mensagem) ? (window.VISITA_PENDENTE || null) : null
   };
+  const resumo = resumoInteresse();
   window.VISITA_PENDENTE = null;
-  // 1) abre o WhatsApp da empresa com a mensagem pronta (no mesmo clique, para o navegador não bloquear)
-  const texto = `Olá! Meu nome é ${nome}.\nMeu WhatsApp: ${dados.telefone}\n\n${mensagem}`;
+  const p = window.IMOVEL_ATUAL;
+  if (p) dados.pagina = ('Imóvel: ' + p.titulo).slice(0, 40);
+  dados.mensagem = mensagem + '\n\n— Resumo —\n' + resumo.join('\n').replace(/\*/g, '');
+  // 1) abre o WhatsApp da empresa com a mensagem resumida (no mesmo clique, para o navegador não bloquear)
+  const texto = `Olá! Vim pelo site do Grupo Bahia Imóveis.\n\n👤 *Nome:* ${nome}\n📱 *WhatsApp:* ${dados.telefone}\n${resumo.join('\n')}\n\n💬 *Mensagem:* ${mensagem}`;
   const link = waLink(CONFIG.whatsapp, texto);
   const aba = window.open(link, '_blank');
   if (aba) { try { aba.opener = null; } catch(_){} } else location.href = link;
@@ -186,6 +217,7 @@ function montarCategorias(){
 /* ===== GUIAS (tudo na mesma página, sem trocar o link) ===== */
 function mostrarAba(nome){
   const alvo = $(`.tab[data-aba="${nome}"]`); if (!alvo) return;
+  if (nome !== 'detalhe') window.IMOVEL_ATUAL = null;
   $$('.tab').forEach(t => t.hidden = t !== alvo);
   $$('.menu [data-tab]').forEach(a => { a.classList.toggle('active', a.dataset.tab === (nome === 'detalhe' ? 'imoveis' : nome)); });
   document.body.dataset.page = alvo.dataset.nome;
@@ -305,6 +337,7 @@ function iconeFicha(rotulo){
 }
 function abrirImovel(id){
   const p = POSTS.find(x => x.id === id); if (!p) return;
+  window.IMOVEL_ATUAL = p;
   const atual = $('.tab:not([hidden])'); if (atual && atual.dataset.aba !== 'detalhe') abaAnterior = atual.dataset.aba;
   const ms = p.midias || [];
   const fotos = ms.map((m, i) => ({m, i})).filter(x => x.m.tipo === 'imagem');
