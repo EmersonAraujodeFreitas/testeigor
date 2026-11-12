@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com; frame-src https://www.google.com https://maps.google.com https://www.youtube.com https://www.youtube-nocookie.com https://drive.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://nominatim.openstreetmap.org; frame-src https://www.google.com https://maps.google.com https://www.youtube.com https://www.youtube-nocookie.com https://drive.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 <meta name="format-detection" content="telephone=no">
@@ -56,7 +56,7 @@
 <header class="top" id="top">
   <div class="wrap nav">
     <a href="#" data-tab="inicio" class="brand" aria-label="Grupo Bahia Imóveis — início"><img src="logo-grupo-bahia.png" alt="Grupo Bahia Imóveis"></a>
-    <nav class="menu" id="menu"><a href="#" data-tab="inicio" class="active">Início</a><a href="#" data-tab="imoveis">Imóveis</a><a href="#" data-tab="categorias">Categorias</a><a href="#" data-tab="como-funciona">Como funciona</a><a href="#" data-tab="empresa">A empresa</a><a href="#" data-tab="duvidas">Dúvidas</a><a href="#" data-tab="contato">Contato</a>
+    <nav class="menu" id="menu"><a href="#" data-tab="inicio" class="active">Início</a><a href="#" data-tab="imoveis">Imóveis</a><a href="#" data-tab="mapa">Mapa</a><a href="#" data-tab="categorias">Categorias</a><a href="#" data-tab="como-funciona">Como funciona</a><a href="#" data-tab="empresa">A empresa</a><a href="#" data-tab="duvidas">Dúvidas</a><a href="#" data-tab="contato">Contato</a>
       <button class="btn btn-wa" data-chat=""><svg><use href="#i-wa"/></svg>Fale conosco</button>
     </nav>
     <div class="lang" role="group" aria-label="Idioma"><button type="button" data-lang="pt" title="Português" aria-pressed="true"><svg viewBox='0 0 30 20'><rect width='30' height='20' fill='#009c3b'/><polygon points='15,2 28,10 15,18 2,10' fill='#ffdf00'/><circle cx='15' cy='10' r='4.6' fill='#002776'/><path d='M10.6 8.9 Q15 7.4 19.5 11' stroke='#fff' stroke-width='.9' fill='none'/></svg></button><button type="button" data-lang="en" title="English"><svg viewBox='0 0 30 20'><rect width='30' height='20' fill='#fff'/><rect y='0.00' width='30' height='1.54' fill='#b22234'/><rect y='3.08' width='30' height='1.54' fill='#b22234'/><rect y='6.15' width='30' height='1.54' fill='#b22234'/><rect y='9.23' width='30' height='1.54' fill='#b22234'/><rect y='12.31' width='30' height='1.54' fill='#b22234'/><rect y='15.38' width='30' height='1.54' fill='#b22234'/><rect y='18.46' width='30' height='1.54' fill='#b22234'/><rect width='13' height='10.77' fill='#3c3b6e'/><circle cx='1.6' cy='1.3' r='.45' fill='#fff'/><circle cx='4.0' cy='1.3' r='.45' fill='#fff'/><circle cx='6.4' cy='1.3' r='.45' fill='#fff'/><circle cx='8.8' cy='1.3' r='.45' fill='#fff'/><circle cx='11.2' cy='1.3' r='.45' fill='#fff'/><circle cx='2.8' cy='3.3' r='.45' fill='#fff'/><circle cx='5.2' cy='3.3' r='.45' fill='#fff'/><circle cx='7.6' cy='3.3' r='.45' fill='#fff'/><circle cx='10.0' cy='3.3' r='.45' fill='#fff'/><circle cx='1.6' cy='5.4' r='.45' fill='#fff'/><circle cx='4.0' cy='5.4' r='.45' fill='#fff'/><circle cx='6.4' cy='5.4' r='.45' fill='#fff'/><circle cx='8.8' cy='5.4' r='.45' fill='#fff'/><circle cx='11.2' cy='5.4' r='.45' fill='#fff'/><circle cx='2.8' cy='7.4' r='.45' fill='#fff'/><circle cx='5.2' cy='7.4' r='.45' fill='#fff'/><circle cx='7.6' cy='7.4' r='.45' fill='#fff'/><circle cx='10.0' cy='7.4' r='.45' fill='#fff'/><circle cx='1.6' cy='9.5' r='.45' fill='#fff'/><circle cx='4.0' cy='9.5' r='.45' fill='#fff'/><circle cx='6.4' cy='9.5' r='.45' fill='#fff'/><circle cx='8.8' cy='9.5' r='.45' fill='#fff'/><circle cx='11.2' cy='9.5' r='.45' fill='#fff'/></svg></button><button type="button" data-lang="es" title="Español"><svg viewBox='0 0 30 20'><rect width='30' height='20' fill='#aa151b'/><rect y='5' width='30' height='10' fill='#f1bf00'/></svg></button></div>
@@ -141,6 +141,21 @@
   <div class="fresumo" id="filtroResumo" style="display:none"></div>
   <div class="vbar"><div class="toolbar" id="chips"></div><label class="ordem"><span>Ordenar</span><select id="ordem"><option value="">Destaques</option><option value="recentes">Mais recentes</option><option value="menor">Menor preço</option><option value="maior">Maior preço</option></select></label></div>
   <div class="pcards" id="cards"></div>
+</div></section></div>
+<div class="tab" data-aba="mapa" data-nome="Mapa" hidden><section class="page-hero"><svg class="topo" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g fill="none" stroke="#d9ad5f" stroke-width="1" opacity=".35">
+<path d="M-50 620 C 200 540, 380 700, 620 600 S 1000 470, 1260 560"/><path d="M-50 560 C 220 470, 400 640, 640 540 S 1010 400, 1260 500"/>
+<path d="M-50 500 C 240 400, 420 580, 660 480 S 1020 330, 1260 440"/><path d="M-50 440 C 260 330, 440 520, 680 420 S 1030 260, 1260 380"/>
+<path d="M-50 380 C 280 260, 460 460, 700 360 S 1040 190, 1260 320"/><path d="M-50 320 C 300 190, 480 400, 720 300 S 1050 120, 1260 260"/>
+<path d="M-50 260 C 320 120, 500 340, 740 240 S 1060 50, 1260 200"/><path d="M-50 200 C 340 50, 520 280, 760 180 S 1070 -20, 1260 140"/></g></svg>
+  <div class="wrap rv">
+    <span class="eyebrow">Onde estamos</span>
+    <h1>Imóveis <span class="gold">no mapa</span></h1>
+    <p class="lead"><span id="mapaInfo">Carregando o mapa…</span></p>
+  </div>
+</section>
+<section class="page mapa-pg"><div class="wrap mapa-grid">
+  <div class="mapa-box"><div id="mapaGeral" role="region" aria-label="Mapa dos imóveis"></div></div>
+  <aside class="mapa-side"><span class="mini">Toque para localizar</span><div id="mapaLista"></div></aside>
 </div></section></div>
 <div class="tab" data-aba="categorias" data-nome="Categorias" hidden><section class="page-hero"><svg class="topo" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g fill="none" stroke="#d9ad5f" stroke-width="1" opacity=".35">
 <path d="M-50 620 C 200 540, 380 700, 620 600 S 1000 470, 1260 560"/><path d="M-50 560 C 220 470, 400 640, 640 540 S 1010 400, 1260 500"/>
@@ -288,7 +303,7 @@
         <p>Realizando sonhos, construindo futuro! Fazendas, terrenos, loteamentos, sítios, chácaras e casas em todo o Brasil.</p>
         <div class="cnpj"><svg><use href="#i-shield"/></svg><span><small>Empresa registrada</small>CNPJ 00.987.899/0001-88</span></div>
       </div>
-      <nav><h4>Navegação</h4><a href="#" data-tab="inicio">Início</a><a href="#" data-tab="imoveis">Imóveis</a><a href="#" data-tab="categorias">Categorias</a><a href="#" data-tab="como-funciona">Como funciona</a><a href="#" data-tab="empresa">A empresa</a><a href="#" data-tab="duvidas">Dúvidas</a><a href="#" data-tab="contato">Contato</a></nav>
+      <nav><h4>Navegação</h4><a href="#" data-tab="inicio">Início</a><a href="#" data-tab="imoveis">Imóveis</a><a href="#" data-tab="mapa">Mapa</a><a href="#" data-tab="categorias">Categorias</a><a href="#" data-tab="como-funciona">Como funciona</a><a href="#" data-tab="empresa">A empresa</a><a href="#" data-tab="duvidas">Dúvidas</a><a href="#" data-tab="contato">Contato</a></nav>
       <nav><h4>Categorias</h4><a href="#" data-cat="Fazenda">Fazenda</a><a href="#" data-cat="Terreno">Terreno</a><a href="#" data-cat="Loteamento">Loteamento</a><a href="#" data-cat="Sítio">Sítio</a><a href="#" data-cat="Chácara">Chácara</a><a href="#" data-cat="Casa">Casa</a></nav>
       <div class="fcontato"><h4>Atendimento</h4>
         <button class="fline" data-chat=""><svg><use href="#i-wa"/></svg><span><small>WhatsApp</small>(71) 99602-0606</span></button>

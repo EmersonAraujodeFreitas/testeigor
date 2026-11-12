@@ -74,8 +74,10 @@ async function enviarContato({nome, telefone, mensagem}){
   const dados = {
     nome, telefone: mascaraTel(tel), mensagem, pagina: pagina(),
     responder: waLink('55' + tel),
-    data: new Date().toLocaleString('pt-BR')
+    data: new Date().toLocaleString('pt-BR'),
+    visita: /visita/i.test(mensagem) ? (window.VISITA_PENDENTE || null) : null
   };
+  window.VISITA_PENDENTE = null;
   if (CONFIG.endpoint){
     await fetch(CONFIG.endpoint, {method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(dados)});
     return 'direto';
@@ -189,6 +191,7 @@ function mostrarAba(nome){
   window.scrollTo({top:0, behavior:'instant' in window ? 'instant' : 'auto'});
   if (nome === 'imoveis') montarImoveis();
   if (nome === 'inicio') montarVistos();
+  if (nome === 'mapa') montarMapa();
 }
 
 /* ===== FILTROS DOS IMÓVEIS ===== */
@@ -412,6 +415,7 @@ function abrirImovel(id){
   escolher('.vis-d button'); escolher('.vis-p button');
   $('#pedirVisita').onclick = () => {
     const d = body.querySelector('.vis-d .on'), per = body.querySelector('.vis-p .on');
+    window.VISITA_PENDENTE = {imovelId: p.id, imovel: p.titulo, dia: d.dataset.dia, periodo: per.dataset.per};
     abrirChat(`Olá! Gostaria de agendar uma visita: ${p.titulo}${p.cidade ? ' (' + p.cidade + ')' : ''}.\nDia: ${d.dataset.sem}, ${d.dataset.dia}\nPeríodo: ${per.dataset.per}`);
   };
   const trilho = body.querySelector('.sim2-t');
@@ -425,7 +429,7 @@ function abrirImovel(id){
       else { await navigator.clipboard.writeText(texto); const s = sh.querySelector('span'); if (s){ s.textContent = 'Texto copiado!'; setTimeout(() => s.textContent = 'Compartilhar', 2200); } }
     } catch(_) {}
   });
-  marcarVisto(p.id);
+  marcarVisto(p.id); contarVisita(p.id);
   mostrarAba('detalhe');
 }
 
@@ -768,6 +772,12 @@ function aplicarConfig(c){
     const fx = hero.querySelector('.faixa');
     if (fx){ fx.hidden = !(c.faixaAtiva && c.faixaTexto); if (!fx.hidden){ fx.querySelector('span').textContent = c.faixaTexto; fx.dataset.chat = 'Olá! Vi no site: ' + c.faixaTexto; } }
   }
+  $$('[data-extra="creci"]').forEach(e => e.remove());
+  if (c.creci){
+    const cn = $('.fbrand .cnpj'); if (cn) cn.insertAdjacentHTML('afterend', `<div class="cnpj creci" data-extra="creci"><svg><use href="#i-check"/></svg><span><small>Corretor credenciado</small>${esc(c.creci)}</span></div>`);
+    const ci = $('.cinfo'); if (ci) ci.insertAdjacentHTML('beforeend', `<div data-extra="creci"><span class="ico"><svg><use href="#i-check"/></svg></span><span><b>Corretor credenciado</b><small>${esc(c.creci)}</small></span></div>`);
+    const vc = $('.vis-cnpj'); if (vc && !vc.dataset.creci){ vc.dataset.creci = 1; }
+  }
   const sobre = $('.tab[data-aba="empresa"] .about > div:last-child > p');
   if (c.sobreTexto && sobre && sobre.textContent !== c.sobreTexto) sobre.textContent = c.sobreTexto;
   // e-mail e Instagram no rodapé e na página de contato
@@ -844,6 +854,75 @@ if (matchMedia('(hover:hover) and (pointer:fine)').matches && !matchMedia('(pref
     c.style.setProperty('--mx', (x + .5) * 100 + '%'); c.style.setProperty('--my', (y + .5) * 100 + '%');
   }, {passive: true});
   document.addEventListener('pointerout', e => { const c = e.target.closest && e.target.closest('.pcard'); if (c && !c.contains(e.relatedTarget)) c.style.transform = ''; });
+}
+
+
+/* ===== GUIA MAPA: todos os imóveis com localização ===== */
+const coordDe = p => {
+  if (p.lat != null && p.lat !== '' && p.lng != null && p.lng !== '' && !isNaN(+p.lat) && !isNaN(+p.lng)) return [+p.lat, +p.lng];
+  const m = String(p.mapa || '').match(/(-?\d{1,2}(?:[.,]\d+)?)\s*[,;\s]\s*(-?\d{1,3}(?:[.,]\d+)?)/);
+  if (m){ const a = +m[1].replace(',', '.'), b = +m[2].replace(',', '.'); if (Math.abs(a) <= 90 && Math.abs(b) <= 180) return [a, b]; }
+  return null;
+};
+let MAPA = null, MARCAS = {};
+function carregarLeaflet(){
+  if (window.L) return Promise.resolve();
+  return new Promise((ok, erro) => {
+    // Leaflet 1.9.4 (endereço oficial) com verificação de integridade: arquivo alterado = bloqueado pelo navegador
+    const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    css.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY='; css.crossOrigin = ''; document.head.appendChild(css);
+    const js = document.createElement('script'); js.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    js.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo='; js.crossOrigin = ''; js.onload = ok; js.onerror = erro; document.head.appendChild(js);
+  });
+}
+async function montarMapa(){
+  const box = $('#mapaGeral'); if (!box) return;
+  if (!carregado){ await carregarPosts(); carregado = true; }
+  const lista = POSTS.filter(p => p.situacao !== 'vendido').map(p => ({p, c: coordDe(p)}));
+  const com = lista.filter(x => x.c), sem = lista.length - com.length;
+  $('#mapaInfo').textContent = com.length ? `${com.length} ${com.length === 1 ? 'imóvel' : 'imóveis'} no mapa` + (sem ? ` · ${sem} sem localização informada` : '') : 'Os imóveis aparecem aqui assim que tiverem a localização cadastrada.';
+  $('#mapaLista').innerHTML = com.map(({p}) => {
+    const capa = Midia.capa(p);
+    return `<button type="button" class="ml-item" data-mid="${esc(p.id)}">${capa ? `<img src="${esc(capa)}" alt="" loading="lazy">` : '<span class="ml-noimg"><svg><use href="#i-pin"/></svg></span>'}
+      <span><small>${esc(catDe(p))}</small><b>${esc(p.titulo)}</b><em>${esc(p.cidade || '')}</em></span></button>`; }).join('');
+  try { await carregarLeaflet(); } catch(_){ $('#mapaInfo').textContent = 'Não foi possível carregar o mapa agora. Tente novamente em instantes.'; return; }
+  if (!MAPA){
+    MAPA = L.map(box, {scrollWheelZoom: false, zoomControl: true, attributionControl: true}).setView([-14.2, -51.9], 4);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {maxZoom: 19, subdomains: 'abcd',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> &copy; <a href="https://carto.com/" target="_blank" rel="noopener">CARTO</a>'}).addTo(MAPA);
+    box.addEventListener('click', e => { const b = e.target.closest('[data-abrir]'); if (b){ e.preventDefault(); abrirImovel(b.dataset.abrir); } });
+    MAPA.on('focus', () => MAPA.scrollWheelZoom.enable()); MAPA.on('blur', () => MAPA.scrollWheelZoom.disable());
+  }
+  Object.values(MARCAS).forEach(m => m.remove()); MARCAS = {};
+  com.forEach(({p, c}) => {
+    const icone = L.divIcon({className: 'pino', html: `<span class="pino-in${p.destaque ? ' dest' : ''}"><svg><use href="#i-${({Fazenda: 'fazenda', Terreno: 'terreno', Loteamento: 'lote', 'Sítio': 'sitio', 'Chácara': 'chacara', Casa: 'casa'})[p.categoria] || 'pin'}"/></svg></span>`, iconSize: [40, 48], iconAnchor: [20, 46], popupAnchor: [0, -42]});
+    const capa = Midia.capa(p);
+    const m = L.marker(c, {icon: icone, title: p.titulo}).addTo(MAPA).bindPopup(`
+      <div class="pop">${capa ? `<img src="${esc(capa)}" alt="">` : ''}
+        <div class="pop-b"><small>${esc(catDe(p))}${p.cidade ? ' · ' + esc(p.cidade) : ''}</small><b>${esc(p.titulo)}</b>${p.preco ? `<em>${esc(p.preco)}</em>` : ''}
+        <button type="button" class="btn btn-gold sm" data-abrir="${esc(p.id)}">Ver imóvel →</button></div></div>`, {maxWidth: 280, minWidth: 240, className: 'pop-wrap'});
+    MARCAS[p.id] = m;
+  });
+  setTimeout(() => {
+    MAPA.invalidateSize();
+    if (com.length === 1) MAPA.setView(com[0].c, 11);
+    else if (com.length) MAPA.fitBounds(L.latLngBounds(com.map(x => x.c)), {padding: [50, 50], maxZoom: 11});
+  }, 80);
+  $$('#mapaLista [data-mid]').forEach(b => b.onclick = () => {
+    const m = MARCAS[b.dataset.mid]; if (!m) return;
+    $$('#mapaLista .on').forEach(x => x.classList.remove('on')); b.classList.add('on');
+    MAPA.flyTo(m.getLatLng(), 12, {duration: .9}); setTimeout(() => m.openPopup(), 950);
+    if (innerWidth < 900) box.scrollIntoView({behavior: 'smooth', block: 'center'});
+  });
+}
+
+/* ===== VISUALIZAÇÕES (uma por visitante por sessão) ===== */
+function contarVisita(id){
+  if (!CONFIG.endpoint || !id || /^fixo/.test(id)) return;
+  let vistos = []; try { vistos = JSON.parse(sessionStorage.getItem('gbi-views') || '[]'); } catch(_){}
+  if (vistos.includes(id)) return;
+  vistos.push(id); try { sessionStorage.setItem('gbi-views', JSON.stringify(vistos)); } catch(_){}
+  fetch(CONFIG.endpoint, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'}, body: JSON.stringify({acao: 'visto', id})}).catch(() => {});
 }
 
 /* ===== GERAL ===== */
@@ -1042,7 +1121,7 @@ const I18N = (() => {
     ['Digite sua mensagem.', 'Please type your message.', 'Escriba su mensaje.'], ['Não conseguimos enviar agora. Tente novamente em instantes.', "We couldn't send it now. Please try again shortly.", 'No pudimos enviar ahora. Intente de nuevo en unos instantes.'],
     ['Abrimos o WhatsApp com sua mensagem pronta, é só tocar em enviar.', 'We opened WhatsApp with your message ready, just tap send.', 'Abrimos WhatsApp con su mensaje listo, solo toque en enviar.'],
     ['Empresa registrada', 'Registered company', 'Empresa registrada'],
-    ['Ordenar', 'Sort by', 'Ordenar'], ['Favoritos', 'Favorites', 'Favoritos'], ['Favoritar', 'Save', 'Guardar'], ['Para você', 'For you', 'Para usted'], ['Vistos', 'Recently', 'Vistos'], ['recentemente', 'viewed', 'recientemente'], ['♥ Salvo nos seus favoritos', '♥ Saved to your favorites', '♥ Guardado en sus favoritos'], ['Removido dos favoritos', 'Removed from favorites', 'Eliminado de favoritos'], ['Destaques', 'Featured', 'Destacados'], ['Mais recentes', 'Newest', 'Más recientes'], ['Menor preço', 'Lowest price', 'Menor precio'], ['Maior preço', 'Highest price', 'Mayor precio'], ['Saiba mais →', 'Learn more →', 'Más información →'], ['E-mail', 'E-mail', 'Correo'],
+    ['Ordenar', 'Sort by', 'Ordenar'], ['Onde estamos', 'Where we are', 'Dónde estamos'], ['no mapa', 'on the map', 'en el mapa'], ['Toque para localizar', 'Tap to locate', 'Toque para ubicar'], ['Carregando o mapa…', 'Loading the map…', 'Cargando el mapa…'], ['Ver imóvel →', 'View property →', 'Ver inmueble →'], ['Corretor credenciado', 'Licensed broker', 'Corredor acreditado'], ['Os imóveis aparecem aqui assim que tiverem a localização cadastrada.', 'Properties appear here once their location is registered.', 'Los inmuebles aparecen aquí cuando tengan la ubicación registrada.'], ['Favoritos', 'Favorites', 'Favoritos'], ['Favoritar', 'Save', 'Guardar'], ['Para você', 'For you', 'Para usted'], ['Vistos', 'Recently', 'Vistos'], ['recentemente', 'viewed', 'recientemente'], ['♥ Salvo nos seus favoritos', '♥ Saved to your favorites', '♥ Guardado en sus favoritos'], ['Removido dos favoritos', 'Removed from favorites', 'Eliminado de favoritos'], ['Destaques', 'Featured', 'Destacados'], ['Mais recentes', 'Newest', 'Más recientes'], ['Menor preço', 'Lowest price', 'Menor precio'], ['Maior preço', 'Highest price', 'Mayor precio'], ['Saiba mais →', 'Learn more →', 'Más información →'], ['E-mail', 'E-mail', 'Correo'],
     ['Praias', 'Beaches', 'Playas'], ['Terrenos com lago', 'Land with lakes', 'Terrenos con lago'], ['Fazendas', 'Farms', 'Haciendas'], ['Litoral', 'Coastline', 'Litoral'], ['Rios e natureza', 'Rivers and nature', 'Ríos y naturaleza'],
     ['Ver as fotos', 'See the photos', 'Ver las fotos'], ['Assistir ao vídeo', 'Watch the video', 'Ver el video'], ['Valor', 'Price', 'Valor'],
     ['Sobre o imóvel', 'About the property', 'Sobre el inmueble'], ['Conheça', 'Discover', 'Conozca'], ['cada detalhe', 'every detail', 'cada detalle'], ['os detalhes', 'the details', 'los detalles'],
@@ -1068,6 +1147,7 @@ const I18N = (() => {
     [/^Mensagem enviada! ✅ Vamos responder no seu WhatsApp (.+)\.$/, (m, l) => l === 'en' ? `Message sent! ✅ We will reply on your WhatsApp ${m[1]}.` : `¡Mensaje enviado! ✅ Le responderemos por WhatsApp ${m[1]}.`],
     [/^Fotos (\d+)$/, (m, l) => (l === 'en' ? 'Photos ' : 'Fotos ') + m[1]],
     [/^Vídeos (\d+)$/, (m, l) => (l === 'en' ? 'Videos ' : 'Videos ') + m[1]],
+    [/^(\d+) imóve(l|is) no mapa(?: · (\d+) sem localização informada)?$/, (m, l) => l === 'en' ? `${m[1]} propert${m[1] === '1' ? 'y' : 'ies'} on the map` + (m[3] ? ` · ${m[3]} without location` : '') : `${m[1]} inmueble${m[1] === '1' ? '' : 's'} en el mapa` + (m[3] ? ` · ${m[3]} sin ubicación` : '')],
     [/^de (.+)$/, (m, l) => (l === 'en' ? 'from ' : 'de ') + m[1]],
   ];
   const cap = s => s.charAt(0).toUpperCase() + s.slice(1);

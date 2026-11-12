@@ -23,10 +23,13 @@ const TIPOS_MIDIA = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'vide
 
 const ABAS = {
   Usuarios: ['id', 'usuario', 'nome', 'papel', 'status', 'salt', 'hash', 'criado', 'ultimoAcesso'],
-  Posts:    ['id', 'tipo', 'titulo', 'categoria', 'cidade', 'resumo', 'etiqueta', 'preco', 'descricao', 'distancias', 'localTexto', 'mapa', 'ficha', 'situacao', 'formato', 'midias', 'status', 'destaque', 'ordem', 'autor', 'criado', 'atualizado'],
+  Posts:    ['id', 'tipo', 'titulo', 'categoria', 'cidade', 'resumo', 'etiqueta', 'preco', 'descricao', 'distancias', 'localTexto', 'mapa', 'ficha', 'situacao', 'formato', 'midias', 'status', 'destaque', 'ordem', 'autor', 'criado', 'atualizado', 'views', 'lat', 'lng', 'publicarEm'],
   Log:      ['data', 'usuario', 'acao', 'detalhe'],
-  Contatos: ['Data', 'Nome', 'WhatsApp', 'Mensagem', 'Página', 'Chamar no WhatsApp']
+  Contatos: ['Data', 'Nome', 'WhatsApp', 'Mensagem', 'Página', 'Chamar no WhatsApp', 'Status', 'Obs'],
+  Visitas:  ['Data', 'Imóvel', 'ImóvelId', 'Dia', 'Período', 'Nome', 'WhatsApp', 'Status', 'Obs']
 };
+const STATUS_CONTATO = ['Novo', 'Em atendimento', 'Visitou', 'Proposta', 'Fechou', 'Perdido'];
+const STATUS_VISITA = ['Pendente', 'Confirmada', 'Realizada', 'Cancelada'];
 
 /* ================= ENTRADAS ================= */
 
@@ -42,14 +45,14 @@ function doPost(e) {
   try {
     preparar();
     const acao = d.acao || 'contato';
-    const publicas = { contato, posts: () => ({ posts: postsPublicos(), config: lerConfig() }), login, solicitarAcesso };
+    const publicas = { contato, posts: () => ({ posts: postsPublicos(), config: lerConfig() }), login, solicitarAcesso, visto };
     if (publicas[acao]) return json(Object.assign({ ok: true }, publicas[acao](d) || {}));
 
     const eu = usuarioDaSessao(d.token);
     if (!eu) return json({ ok: false, erro: 'Sessão expirada. Entre novamente.', sair: true });
 
-    const logadas = { me, logout, painel, postsAdmin, salvarPost, excluirPost, statusPost, moverPost, enviarMidia, trocarSenha, configAdm: () => ({ config: lerConfig() }) };
-    const doDono = { usuarios, criarUsuario, aprovarUsuario, bloquearUsuario, excluirUsuario, redefinirSenha, alterarPapel, registro, salvarConfig, contatos };
+    const logadas = { me, logout, painel, postsAdmin, salvarPost, excluirPost, statusPost, moverPost, enviarMidia, trocarSenha, backup, configAdm: () => ({ config: lerConfig() }) };
+    const doDono = { usuarios, criarUsuario, aprovarUsuario, bloquearUsuario, excluirUsuario, redefinirSenha, alterarPapel, registro, salvarConfig, contatos, contatoStatus, visitas, visitaStatus };
     if (logadas[acao]) return json(Object.assign({ ok: true }, logadas[acao](d, eu) || {}));
     if (doDono[acao]) {
       if (eu.papel !== 'dono') throw new Error('Somente o dono pode fazer isso.');
@@ -70,14 +73,36 @@ function contato(d) {
   limitar('ct_' + dig, 5, 600, 'Muitas mensagens deste número. Tente novamente em alguns minutos.');
   limitar('ct_total', 60, 600, 'Muitas mensagens no momento. Tente novamente em alguns minutos.');
   const responder = 'https://wa.me/55' + dig;
-  aba('Contatos').appendRow([agora(), nome, tel, msg, pagina, responder].map(seguro));
-  const texto = '🏡 *Novo contato pelo site*\n*Nome:* ' + nome + '\n*WhatsApp:* ' + tel + '\n*Página:* ' + pagina + '\n\n' + msg + '\n\nResponder: ' + responder;
-  const p = PropertiesService.getScriptProperties();
-  if (p.getProperty('WHATSAPP_NUMERO') && p.getProperty('CALLMEBOT_APIKEY')) {
-    UrlFetchApp.fetch('https://api.callmebot.com/whatsapp.php?phone=' + p.getProperty('WHATSAPP_NUMERO') +
-      '&text=' + encodeURIComponent(texto) + '&apikey=' + p.getProperty('CALLMEBOT_APIKEY'), { muteHttpExceptions: true });
+  inserir('Contatos', { 'Data': agora(), 'Nome': nome, 'WhatsApp': tel, 'Mensagem': msg, 'Página': pagina, 'Chamar no WhatsApp': responder, 'Status': 'Novo', 'Obs': '' });
+  let extra = '';
+  const v = d.visita;
+  if (v && typeof v === 'object') {
+    const dia = limpar(v.dia, 20), per = limpar(v.periodo, 12), im = limpar(v.imovel, 120), imId = limpar(v.imovelId, 40);
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dia)) {
+      inserir('Visitas', { 'Data': agora(), 'Imóvel': im, 'ImóvelId': imId, 'Dia': dia, 'Período': per, 'Nome': nome, 'WhatsApp': tel, 'Status': 'Pendente', 'Obs': '' });
+      extra = '\n📅 *Pedido de visita:* ' + dia + ' (' + per + ') — ' + im;
+    }
   }
-  if (p.getProperty('EMAIL_AVISO')) MailApp.sendEmail(p.getProperty('EMAIL_AVISO'), 'Novo contato pelo site: ' + nome, texto.replace(/\*/g, ''));
+  notificar('🏡 *Novo contato pelo site*\n*Nome:* ' + nome + '\n*WhatsApp:* ' + tel + '\n*Página:* ' + pagina + extra + '\n\n' + msg + '\n\nResponder: ' + responder,
+    (extra ? 'Pedido de visita: ' : 'Novo contato pelo site: ') + nome);
+}
+function notificar(texto, assunto) {
+  const p = PropertiesService.getScriptProperties();
+  try {
+    if (p.getProperty('WHATSAPP_NUMERO') && p.getProperty('CALLMEBOT_APIKEY')) {
+      UrlFetchApp.fetch('https://api.callmebot.com/whatsapp.php?phone=' + p.getProperty('WHATSAPP_NUMERO') +
+        '&text=' + encodeURIComponent(texto) + '&apikey=' + p.getProperty('CALLMEBOT_APIKEY'), { muteHttpExceptions: true });
+    }
+    if (p.getProperty('EMAIL_AVISO')) MailApp.sendEmail(p.getProperty('EMAIL_AVISO'), assunto, texto.replace(/\*/g, ''));
+  } catch (_) {}
+}
+/** Conta uma visualização do imóvel (chamado pelo site, uma vez por visitante por sessão). */
+function visto(d) {
+  const id = limpar(d.id, 40); if (!id) return;
+  limitar('vw_total', 5000, 3600, 'Limite de visualizações.');
+  const lock = LockService.getScriptLock(); if (!lock.tryLock(5000)) return;
+  try { const p = linhas('Posts').find(x => x.id === id && x.status === 'publicado'); if (p) atualizar('Posts', id, { views: (Number(p.views) || 0) + 1 }); }
+  finally { lock.releaseLock(); }
 }
 
 /* ================= ACESSO ================= */
@@ -109,6 +134,7 @@ function solicitarAcesso(d) {
   validarNovoUsuario(nome, usuario, senha);
   novoUsuario(nome, usuario, senha, 'editor', 'pendente');
   log(usuario, 'solicitou acesso', nome);
+  notificar('🔐 *Novo pedido de acesso ao painel*\n*Nome:* ' + nome + '\n*Usuário:* ' + usuario + '\n\nAutorize ou recuse em: Painel > Usuários e acessos.', 'Pedido de acesso ao painel: ' + nome);
   return { mensagem: 'Pedido enviado. Aguarde a autorização do dono.' };
 }
 
@@ -156,8 +182,9 @@ function alvo(id, eu, permitirProprio) {
 /* ================= POSTAGENS ================= */
 
 function postsPublicos() {
-  return ordenar(linhas('Posts').filter(p => p.status === 'publicado')).map(p => {
-    const o = formatarPost(p); delete o.autor; return o;
+  const agoraIso = Utilities.formatDate(new Date(), 'America/Bahia', "yyyy-MM-dd'T'HH:mm");
+  return ordenar(linhas('Posts').filter(p => p.status === 'publicado' && (!p.publicarEm || p.publicarEm <= agoraIso))).map(p => {
+    const o = formatarPost(p); delete o.autor; delete o.views; delete o.publicarEm; return o;
   });
 }
 function postsAdmin() { return { posts: ordenar(linhas('Posts')).map(formatarPost) }; }
@@ -169,7 +196,12 @@ function painel() {
     publicados: posts.filter(p => p.status === 'publicado').length,
     rascunhos: posts.filter(p => p.status !== 'publicado').length,
     pendentes: us.filter(u => u.status === 'pendente').length,
-    contatos: Math.max(aba('Contatos').getLastRow() - 1, 0)
+    contatos: Math.max(aba('Contatos').getLastRow() - 1, 0),
+    views: posts.reduce((s, p) => s + (Number(p.views) || 0), 0),
+    maisVistos: posts.filter(p => Number(p.views) > 0).sort((a, b) => b.views - a.views).slice(0, 5).map(p => ({ id: p.id, titulo: p.titulo, views: Number(p.views) })),
+    funil: STATUS_CONTATO.map(s => ({ status: s, n: linhas('Contatos').filter(c => (c['Status'] || 'Novo') === s).length })),
+    visitasPendentes: linhas('Visitas').filter(v => (v['Status'] || 'Pendente') === 'Pendente').length,
+    agendadas: posts.filter(p => p.status === 'publicado' && p.publicarEm && p.publicarEm > Utilities.formatDate(new Date(), 'America/Bahia', "yyyy-MM-dd'T'HH:mm")).length
   };
 }
 
@@ -188,6 +220,7 @@ function salvarPost(d, eu) {
     titulo, categoria: limpar(p.categoria, 40), cidade: limpar(p.cidade, 100),
     resumo: limpar(p.resumo, 160), etiqueta: limpar(p.etiqueta, 40),
     preco: limpar(p.preco, 40), descricao: limpar(p.descricao, 6000), mapa: limpar(p.mapa, 300),
+    lat: coord(p.lat, 90), lng: coord(p.lng, 180), publicarEm: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(String(p.publicarEm || '')) ? String(p.publicarEm) : '',
     distancias: JSON.stringify((Array.isArray(p.distancias) ? p.distancias : []).slice(0, 6)
       .map(x => ({ local: limpar(x.local, 40), km: limpar(x.km, 10).replace(/[^\d.,]/g, ''), dir: ['N', 'NE', 'L', 'SE', 'S', 'SO', 'O', 'NO'].indexOf(x.dir) >= 0 ? x.dir : '' })).filter(x => x.local && x.km)),
     localTexto: limpar(p.localTexto, 400),
@@ -243,7 +276,7 @@ function enviarMidia(d, eu) {
 
 /* ================= CONFIGURAÇÕES DO SITE (só o dono) ================= */
 
-const CFG_TEXTOS = { whatsapp: 15, whatsappExibir: 30, cnpj: 25, email: 80, instagram: 200, heroEyebrow: 60, heroTitulo1: 60,
+const CFG_TEXTOS = { creci: 30, whatsapp: 15, whatsappExibir: 30, cnpj: 25, email: 80, instagram: 200, heroEyebrow: 60, heroTitulo1: 60,
   heroTitulo2: 60, heroTexto: 300, faixaTexto: 140, sobreTexto: 800 };
 function lerConfig() {
   try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('SITE_CONFIG') || '{}'); } catch (_) { return {}; }
@@ -261,9 +294,29 @@ function salvarConfig(d, eu) {
   log(eu.usuario, 'alterou configurações do site', '');
 }
 function contatos() {
-  return { contatos: linhas('Contatos').slice(-500).reverse().map(c => ({ data: c['Data'], nome: c['Nome'], tel: c['WhatsApp'],
-    msg: c['Mensagem'], pagina: c['Página'], link: c['Chamar no WhatsApp'] })) };
+  return { contatos: linhas('Contatos').slice(-500).reverse().map(c => ({ linha: c._linha, data: c['Data'], nome: c['Nome'], tel: c['WhatsApp'],
+    msg: c['Mensagem'], pagina: c['Página'], link: c['Chamar no WhatsApp'], status: c['Status'] || 'Novo', obs: c['Obs'] || '' })) };
 }
+function contatoStatus(d, eu) {
+  const l = Number(d.linha), st = STATUS_CONTATO.indexOf(d.status) >= 0 ? d.status : null;
+  if (!(l >= 2) || l > aba('Contatos').getLastRow()) throw new Error('Contato não encontrado.');
+  const cab = cabecalho('Contatos'), a = aba('Contatos');
+  if (st) a.getRange(l, cab.indexOf('Status') + 1).setValue(st);
+  if (d.obs != null) a.getRange(l, cab.indexOf('Obs') + 1).setValue(seguro(limpar(d.obs, 300)));
+  log(eu.usuario, 'atualizou contato', 'linha ' + l + (st ? ' → ' + st : ''));
+}
+function visitas() {
+  return { visitas: linhas('Visitas').slice(-500).reverse().map(v => ({ linha: v._linha, data: v['Data'], imovel: v['Imóvel'], imovelId: v['ImóvelId'],
+    dia: v['Dia'], periodo: v['Período'], nome: v['Nome'], tel: v['WhatsApp'], status: v['Status'] || 'Pendente', obs: v['Obs'] || '' })) };
+}
+function visitaStatus(d, eu) {
+  const l = Number(d.linha), st = STATUS_VISITA.indexOf(d.status) >= 0 ? d.status : null;
+  if (!(l >= 2) || l > aba('Visitas').getLastRow() || !st) throw new Error('Visita não encontrada.');
+  aba('Visitas').getRange(l, cabecalho('Visitas').indexOf('Status') + 1).setValue(st);
+  log(eu.usuario, 'visita ' + st, 'linha ' + l);
+}
+function backup() { return { posts: ordenar(linhas('Posts')).map(formatarPost) }; }
+function coord(v, max) { const n = Number(String(v == null ? '' : v).replace(',', '.')); return v === '' || v == null || isNaN(n) || Math.abs(n) > max ? '' : Math.round(n * 1e6) / 1e6; }
 
 /* ================= AUXILIARES ================= */
 
@@ -271,7 +324,10 @@ function preparar() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   Object.keys(ABAS).forEach(n => {
     let a = ss.getSheetByName(n);
-    if (!a) { a = ss.insertSheet(n); a.appendRow(ABAS[n]); a.setFrozenRows(1); }
+    if (!a) { a = ss.insertSheet(n); a.appendRow(ABAS[n]); a.setFrozenRows(1); return; }
+    const cab = a.getRange(1, 1, 1, Math.max(a.getLastColumn(), 1)).getValues()[0].map(String);
+    const falta = ABAS[n].filter(c => cab.indexOf(c) < 0);
+    if (falta.length) a.getRange(1, cab.filter(String).length + 1, 1, falta.length).setValues([falta]);
   });
   const props = PropertiesService.getScriptProperties();
   const inicial = props.getProperty('SENHA_INICIAL_DONO');
@@ -316,7 +372,7 @@ function hash(senha, salt) {
 function publicoUsuario(u) { return { id: u.id, usuario: u.usuario, nome: u.nome, papel: u.papel, status: u.status, criado: u.criado, ultimoAcesso: u.ultimoAcesso, protegido: u.usuario === DONO.usuario }; }
 function formatarPost(p) {
   let m = [], ds = [], fi = []; try { m = JSON.parse(p.midias || '[]'); } catch (_) {} try { ds = JSON.parse(p.distancias || '[]'); } catch (_) {} try { fi = JSON.parse(p.ficha || '[]'); } catch (_) {}
-  return { id: p.id, tipo: p.tipo, titulo: p.titulo, categoria: p.categoria, cidade: p.cidade, resumo: p.resumo, etiqueta: p.etiqueta, preco: p.preco, descricao: p.descricao, distancias: ds, localTexto: p.localTexto, mapa: p.mapa, ficha: fi, situacao: p.situacao || 'disponivel', formato: p.formato || 'padrao', midias: m, status: p.status, destaque: p.destaque === 'sim', ordem: Number(p.ordem) || 0, autor: p.autor, criado: p.criado, atualizado: p.atualizado };
+  return { id: p.id, tipo: p.tipo, titulo: p.titulo, categoria: p.categoria, cidade: p.cidade, resumo: p.resumo, etiqueta: p.etiqueta, preco: p.preco, descricao: p.descricao, distancias: ds, localTexto: p.localTexto, mapa: p.mapa, ficha: fi, situacao: p.situacao || 'disponivel', formato: p.formato || 'padrao', midias: m, status: p.status, destaque: p.destaque === 'sim', ordem: Number(p.ordem) || 0, autor: p.autor, criado: p.criado, atualizado: p.atualizado, views: Number(p.views) || 0, lat: p.lat === '' ? null : Number(p.lat), lng: p.lng === '' ? null : Number(p.lng), publicarEm: p.publicarEm || '' };
 }
 function ordenar(l) { return l.sort((a, b) => (Number(a.ordem) || 0) - (Number(b.ordem) || 0)); }
 function pasta() {
@@ -331,10 +387,13 @@ function linhas(n) {
 }
 // Evita que textos começando com = + - @ virem fórmula na planilha
 function seguro(v) { return typeof v === 'string' && /^[=+\-@]/.test(v) ? "'" + v : v; }
-function inserir(n, o) { aba(n).appendRow(ABAS[n].map(c => seguro(o[c] !== undefined ? o[c] : ''))); }
+const CAB = {};
+function cabecalho(n) { if (!CAB[n]) { const a = aba(n); CAB[n] = a.getRange(1, 1, 1, Math.max(a.getLastColumn(), 1)).getValues()[0].map(String); } return CAB[n]; }
+function inserir(n, o) { aba(n).appendRow(cabecalho(n).map(c => seguro(o[c] !== undefined ? o[c] : ''))); }
 function atualizar(n, id, mud) {
   const a = aba(n), l = linhas(n).find(x => x.id === id); if (!l) return;
-  Object.keys(mud).forEach(c => { const j = ABAS[n].indexOf(c); if (j >= 0) a.getRange(l._linha, j + 1).setValue(seguro(mud[c])); });
+  const cab = cabecalho(n);
+  Object.keys(mud).forEach(c => { const j = cab.indexOf(c); if (j >= 0) a.getRange(l._linha, j + 1).setValue(seguro(mud[c])); });
 }
 function apagarLinha(n, id) { const l = linhas(n).find(x => x.id === id); if (l) aba(n).deleteRow(l._linha); }
 function log(usuario, acao, detalhe) { aba('Log').appendRow([agora(), usuario, acao, limpar(detalhe, 300)].map(seguro)); }
