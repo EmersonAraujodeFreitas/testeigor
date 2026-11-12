@@ -830,5 +830,15 @@ button.restrito.loading svg{animation:gira .8s linear infinite}
 @media(max-width:620px){.nav .brand img{height:64px}}
 .fbrand img{height:104px}
 .about-card img{max-width:420px;margin:0 auto}
+/* V18: vídeo mais nítido e mais aparente */
+.hvid video{transform:none;transition:opacity 1.4s ease;filter:saturate(1.12) contrast(1.06) brightness(1.04)}
+.hvid video.on{transform:none}
+.hvid::after{background:
+  linear-gradient(90deg,#282d33b8 0%,#282d3370 34%,#282d3318 62%,#282d3300 100%),
+  linear-gradient(180deg,#282d3370 0%,#282d3300 18%,#282d3300 78%,#282d33 100%)}
+.hero-v.vid-on h1,.hero-v.vid-on .lead,.hero-v.vid-on .eyebrow,.hero-v.vid-on .trust span{text-shadow:0 2px 14px #000c,0 1px 3px #0009}
+.hero-v.vid-on .finder{background:linear-gradient(180deg,#2b3036e6,#363c43e6);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+@media(max-width:620px){.hvid::after{background:linear-gradient(180deg,#282d3390 0%,#282d3340 35%,#282d3399 72%,#282d33 100%)}}
+.hero-v.vid-on h1 .gold{text-shadow:none;filter:drop-shadow(0 2px 8px #000000b3)}
 
 @media(max-width:620px){.menu{top:84px}}

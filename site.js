@@ -650,8 +650,10 @@ function iniciarVideoCapa(){
   if (reduz || economia) return;
   const vids = [...box.querySelectorAll('video')];
   const seg = Math.max(4, +CONFIG.segundosPorClipe || 7) * 1000;
-  const qual = innerWidth < 720 ? '360' : '720';
-  const url = (c, q) => c.src.replace('{q}', q || qual);
+  // qualidade: Full HD em telas grandes, 720p nas demais; cai para uma menor se a maior não existir
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const QUALS = innerWidth * dpr >= 1400 ? ['1080', '720', '360'] : ['720', '360'];
+  const url = (c, q) => c.src.replace('{q}', q || QUALS[0]);
   const ui = $('.hvid-tema b'), dots = $('.hvid-dots');
   dots.innerHTML = lista.map((c, k) => `<button type="button" aria-label="${esc(c.tema || 'Clipe ' + (k + 1))}" data-k="${k}"><i></i></button>`).join('');
   let atual = 0, camada = 0, timer = null, falhas = 0, visivel = true, rodando = false;
@@ -660,9 +662,9 @@ function iniciarVideoCapa(){
     dots.querySelectorAll('button').forEach((b, j) => { b.classList.toggle('on', j === k); b.style.setProperty('--t', seg + 'ms'); });
   };
   function carregar(v, k, cb){
-    let tentouBaixa = false;
+    let nq = 0;
     v.onerror = () => {
-      if (!tentouBaixa && qual !== '360' && lista[k].src.includes('{q}')){ tentouBaixa = true; v.src = url(lista[k], '360'); v.load(); return; }
+      if (lista[k].src.includes('{q}') && nq < QUALS.length - 1){ nq++; v.src = url(lista[k], QUALS[nq]); v.load(); return; }
       falhas++; if (falhas >= lista.length * 2) return parar(); cb(false);
     };
     v.oncanplay = () => { v.oncanplay = null; cb(true); };
