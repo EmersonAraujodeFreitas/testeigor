@@ -3,7 +3,7 @@
    ===================================================== */
 window.CONFIG = {
   // WhatsApp da empresa (só números, com 55 + DDD)
-  whatsapp: '5571996020606',
+  whatsapp: '557196020606',
 
   // Endereço do "App da Web" do Google Apps Script (termina em /exec). Veja o LEIA-ME.txt.
   // Com ele preenchido:

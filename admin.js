@@ -541,7 +541,7 @@ $('#ctCsv').onclick = () => {
 
 /* ---------- Configurações do site (só o dono) ---------- */
 const CFG_PADRAO = {
-  whatsapp: '5571996020606', whatsappExibir: '(71) 99602-0606', cnpj: '00.987.899/0001-88', creci: '', email: '', instagram: '',
+  whatsapp: '557196020606', whatsappExibir: '(71) 99602-0606', cnpj: '00.987.899/0001-88', creci: '', email: '', instagram: '',
   heroEyebrow: 'Imóveis em todo o Brasil', heroTitulo1: 'Realizando sonhos,', heroTitulo2: 'construindo futuro!',
   heroTexto: 'Terrenos, loteamentos, fazendas, sítios, chácaras e casas. Encontre o imóvel ideal e fale direto com a nossa equipe.',
   faixaAtiva: false, faixaTexto: '',

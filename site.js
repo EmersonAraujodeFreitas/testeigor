@@ -3,7 +3,7 @@
    ===================================================== */
 
 /* ===== CONFIGURAÇÃO (fica em config.js) ===== */
-const CONFIG = window.CONFIG || { whatsapp: '5571996020606', endpoint: '' };
+const CONFIG = window.CONFIG || { whatsapp: '557196020606', endpoint: '' };
 // Segurança: impede que o site seja exibido dentro de outro site (golpes de "clickjacking")
 if (window.top !== window.self && !CONFIG.exemplo){ try { window.top.location.replace(window.location.href); } catch(e){ document.documentElement.style.display = 'none'; } }
 
@@ -78,12 +78,15 @@ async function enviarContato({nome, telefone, mensagem}){
     visita: /visita/i.test(mensagem) ? (window.VISITA_PENDENTE || null) : null
   };
   window.VISITA_PENDENTE = null;
-  if (CONFIG.endpoint){
-    await fetch(CONFIG.endpoint, {method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(dados)});
-    return 'direto';
-  }
+  // 1) abre o WhatsApp da empresa com a mensagem pronta (no mesmo clique, para o navegador não bloquear)
   const texto = `Olá! Meu nome é ${nome}.\nMeu WhatsApp: ${dados.telefone}\n\n${mensagem}`;
-  window.open(waLink(CONFIG.whatsapp, texto), '_blank', 'noopener');
+  const link = waLink(CONFIG.whatsapp, texto);
+  const aba = window.open(link, '_blank');
+  if (aba) { try { aba.opener = null; } catch(_){} } else location.href = link;
+  // 2) registra o contato no painel (planilha), sem atrasar o cliente
+  if (CONFIG.endpoint){
+    try { fetch(CONFIG.endpoint, {method:'POST', mode:'no-cors', keepalive:true, headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(dados)}).catch(() => {}); } catch(_){}
+  }
   return 'whatsapp';
 }
 
