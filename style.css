@@ -774,5 +774,12 @@ button.restrito.loading svg{animation:gira .8s linear infinite}
 .ph2{padding:0}.d2-sec{padding-top:0}
 @media(max-width:620px){.sbar{display:none}.mbar2 .ic2{margin-left:auto}.mbar2>div{min-width:0}.mbar2 b{white-space:nowrap}}
 @media(max-width:620px){.mbar2 b{display:block;overflow:hidden;text-overflow:ellipsis}.mbar2 .btn{flex:none}}
+/* Logo nunca encolhe nem deforma */
+.nav .brand{flex:0 0 auto;display:block;line-height:0}
+.nav .brand img{height:74px;width:auto;max-width:none;flex-shrink:0;object-fit:contain;aspect-ratio:800/294}
+.nav{gap:18px}
+.menu{flex:0 1 auto;min-width:0}
+@media(min-width:1341px) and (max-width:1520px){.menu a{padding:10px 9px;font-size:13.5px}.menu a.active::after{left:9px;right:9px}.menu .btn{padding:11px 16px;margin-left:6px}.nav .brand img{height:66px}}
+@media(max-width:620px){.nav .brand img{height:58px}}
 
 @media(max-width:620px){.menu{top:84px}}
