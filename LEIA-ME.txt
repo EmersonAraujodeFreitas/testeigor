@@ -1,13 +1,14 @@
-GRUPO BAHIA IMÓVEIS — SITE V11 + PAINEL ADMINISTRATIVO
+GRUPO BAHIA IMÓVEIS — SITE V12 + PAINEL ADMINISTRATIVO
 =====================================================
 
-ARQUIVOS PARA O GITHUB (todos soltos na raiz do repositório, sem pastas)
-  index.html             -> o site completo (estilos, funcionamento e logo já embutidos)
-  admin.html             -> o painel administrativo completo
-  config.js              -> CONFIGURAÇÃO: WhatsApp e endereço do servidor (Passo 4)
-  logo-grupo-bahia.png   -> opcional (ícone/compartilhamento)
-  integracao-google/Codigo.gs -> NÃO precisa ir para o GitHub. É o servidor, vai para o Google.
-Se o config.js não for enviado, o site funciona normalmente e o painel abre em modo demonstração.
+ARQUIVOS PARA O GITHUB (pasta 1-github: enviar os 7 arquivos soltos na raiz do repositório)
+  index.html                      -> o site (o painel abre pelo cadeado no canto inferior direito)
+  style.css, admin.css            -> aparência
+  site.js, admin.js               -> funcionamento (admin.js = painel)
+  config.js                       -> CONFIGURAÇÃO: WhatsApp e endereço do servidor (Passo 4)
+  logo-grupo-bahia.png            -> logomarca
+Se existir admin.html ou admin-conteudo.txt no repositório, APAGUE: o painel agora fica dentro do site.
+Pasta 2-google: Codigo-google.txt -> colar no Google Apps Script (NÃO vai para o GitHub).
 
 COMO O SITE FUNCIONA
   - Guias no topo: Início, Imóveis, Categorias, Como funciona, A empresa, Dúvidas, Contato.
@@ -52,9 +53,10 @@ Passo 3 — Publicar o servidor
    Nova versão. Assim o endereço continua o mesmo.)
 
 Passo 4 — Ligar no site
-  Abra config.js (na raiz do repositório) e cole o endereço:   endpoint: 'https://script.google.com/macros/s/..../exec'
+  Abra config.js e confira o endereço:   endpoint: 'https://script.google.com/macros/s/..../exec'
+  (na V12 o endereço informado já vem preenchido)
   Publique o site de novo. Pronto:
-    - admin.html passa a pedir usuário e senha de verdade;
+    - o cadeado no canto inferior direito do site abre o painel com usuário e senha de verdade;
     - as publicações feitas no painel aparecem na guia Imóveis;
     - o chat envia as mensagens sem tirar o visitante do site.
 
