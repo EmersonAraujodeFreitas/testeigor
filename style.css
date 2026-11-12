@@ -308,7 +308,7 @@ main{min-height:60vh}
 
 @media(max-width:1180px){.menu a{padding:10px 9px;font-size:13.5px}.menu a.active::after{left:9px;right:9px}}
 @media(max-width:1020px){.contact{grid-template-columns:1fr}.links3{grid-template-columns:1fr}}
-@media(max-width:1240px){
+@media(max-width:1340px){
   .burger{display:flex}
   .menu{position:fixed;top:100px;left:0;right:0;flex-direction:column;align-items:stretch;gap:4px;padding:16px 20px 24px;background:#1a1d21f7;border-bottom:1px solid var(--line);transform:translateY(-12px);opacity:0;pointer-events:none;transition:.25s}
   .open .menu{transform:none;opacity:1;pointer-events:auto}
@@ -323,7 +323,7 @@ main{min-height:60vh}
   .chat{right:12px;left:12px;width:auto;max-width:none;bottom:84px;max-height:calc(100dvh - 110px)}
   .chat-f .two{grid-template-columns:1fr}
 }
-@media(max-width:1240px){.menu{background:#1a1d21!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;max-height:calc(100dvh - 84px);overflow:auto}.top.open{backdrop-filter:none;-webkit-backdrop-filter:none;background:#1a1d21}}
+@media(max-width:1340px){.menu{background:#1a1d21!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;max-height:calc(100dvh - 84px);overflow:auto}.top.open{backdrop-filter:none;-webkit-backdrop-filter:none;background:#1a1d21}}
 
 /* ===== V9: página única, vitrine e página do imóvel ===== */
 .tab[hidden]{display:none!important}
@@ -635,7 +635,10 @@ button.restrito.loading svg{animation:gira .8s linear infinite}
 .lang button:hover{opacity:1;transform:translateY(-1px)}
 .lang button.on{opacity:1;border-color:#d9ad5fcc;background:#d9ad5f14}
 .lang svg{width:28px;height:19px;border-radius:3px;box-shadow:0 0 0 1px #0005}
-@media(max-width:1240px){.nav .lang{margin-left:auto;margin-right:6px}}
+@media(max-width:1340px){.nav .lang{margin-left:auto;margin-right:6px}}
 @media(max-width:620px){.lang button{padding:4px}.lang svg{width:24px;height:16px}.lang{gap:2px}}
+
+.menu a,.menu .btn{white-space:nowrap}
+@media(min-width:1341px) and (max-width:1440px){.menu a{padding:10px 10px;font-size:13.5px}.menu a.active::after{left:10px;right:10px}}
 
 @media(max-width:620px){.menu{top:84px}}
