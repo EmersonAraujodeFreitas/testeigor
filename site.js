@@ -671,6 +671,22 @@ function iniciar(){
   });
   carregarPosts().then(() => { carregado = true; montarDestaques(); if (!$('.tab[data-aba="imoveis"]').hidden) desenharImoveis(); });
 
+  // Menu: recolhe para o botão ☰ sempre que os itens não couberem na largura
+  const ajustarMenu = () => {
+    const top = $('#top'), nav = $('.nav'), menu = $('#menu'), brand = $('.brand'), lang = $('.lang');
+    top.classList.remove('mob');
+    if (getComputedStyle($('#burger')).display !== 'none') return;
+    const gap = parseFloat(getComputedStyle(nav).columnGap) || 18;
+    const precisa = brand.offsetWidth + menu.scrollWidth + (lang ? lang.offsetWidth : 0) + gap * 3;
+    if (precisa > nav.clientWidth) top.classList.add('mob');
+  };
+  window.ajustarMenu = ajustarMenu;
+  addEventListener('resize', ajustarMenu);
+  window.addEventListener('gbi-idioma', ajustarMenu);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(ajustarMenu);
+  addEventListener('load', ajustarMenu);
+  ajustarMenu();
+
   // Menu móvel
   const top_ = $('#top'), burger = $('#burger');
   burger.onclick = () => { const o = top_.classList.toggle('open'); burger.setAttribute('aria-expanded', o); };
@@ -901,6 +917,7 @@ const I18N = (() => {
     document.title = traduzir(tituloPt, lang);
     document.querySelectorAll('[data-lang]').forEach(b => { b.classList.toggle('on', b.dataset.lang === lang); b.setAttribute('aria-pressed', b.dataset.lang === lang); });
     trocando = true; percorrer(document.body); trocando = false;
+    window.dispatchEvent(new Event('gbi-idioma'));
   }
   function iniciar(){
     let l = null; try { l = localStorage.getItem('gbi-lang'); } catch(e){}
