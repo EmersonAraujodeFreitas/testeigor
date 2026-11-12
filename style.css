@@ -894,5 +894,9 @@ button.restrito.loading svg{animation:gira .8s linear infinite}
 .fav svg,.fav2 svg,.chip-fav svg{fill:none;stroke:currentColor;stroke-width:1.9}
 .fav.on svg,.fav2.on svg,.chip-fav svg{fill:currentColor}
 .voltar2{z-index:5}.ph2.sem .ph2-in{padding-top:180px}@media(max-width:620px){.ph2.sem .ph2-in{padding-top:150px}}
+/* Voltar sempre no fluxo, acima dos selos (nunca sobrepõe) */
+.voltar2{position:static;grid-column:1/-1;justify-self:start;align-self:start;margin:0 0 6px;top:auto;left:auto}
+.ph2.sem .ph2-in{padding-top:140px}
+@media(max-width:620px){.voltar2{margin-bottom:2px;padding:8px 14px;font-size:13px}.ph2.sem .ph2-in{padding-top:110px}}
 
 @media(max-width:620px){.menu{top:84px}}
