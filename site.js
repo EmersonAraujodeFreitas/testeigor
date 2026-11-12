@@ -448,8 +448,12 @@ function radarSVG(p, ds){
     return {d, x: C + r * Math.cos(a), y: C + r * Math.sin(a), ang};
   });
   const rot = pts.map((t, i) => {
-    const dir = Math.cos(t.ang * Math.PI / 180) >= -0.1 ? 1 : -1;
-    const lx = t.x + 14 * dir, anchor = dir > 0 ? 'start' : 'end';
+    // lado do rótulo: preferência pela direção da cidade, mas sem sair do quadro
+    const larg = Math.max(String(t.d.local).length * 7.6, String(t.d.km).length * 7 + 22);
+    let dir = Math.cos(t.ang * Math.PI / 180) >= -0.1 ? 1 : -1;
+    if (dir > 0 && t.x + 14 + larg > 452) dir = -1; else if (dir < 0 && t.x - 14 - larg < 8) dir = 1;
+    let lx = t.x + 14 * dir; const anchor = dir > 0 ? 'start' : 'end';
+    if (dir > 0 && lx + larg > 452) lx = 452 - larg; if (dir < 0 && lx - larg < 8) lx = 8 + larg;
     const ly = Math.max(26, Math.min(434, t.y));
     return `<g class="rp" style="--d:${.15 + i * .12}s">
       <line x1="${C}" y1="${C}" x2="${t.x.toFixed(1)}" y2="${t.y.toFixed(1)}" class="rl"/>
@@ -462,7 +466,20 @@ function radarSVG(p, ds){
   return `<svg class="radar" viewBox="0 0 460 460" role="img" aria-label="Esquema de distâncias a partir de ${esc(p.titulo)}">
     <defs><radialGradient id="rg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#d9ad5f" stop-opacity=".22"/><stop offset="1" stop-color="#d9ad5f" stop-opacity="0"/></radialGradient></defs>
     <circle cx="${C}" cy="${C}" r="${R1 + 18}" fill="url(#rg)"/>
-    ${aneis.map(k => `<circle cx="${C}" cy="${C}" r="${raio(k).toFixed(1)}" class="ring"/><text x="${C + 5}" y="${(C - raio(k) - 5).toFixed(1)}" class="rlab">${k} km</text>`).join('')}
+    ${(() => {
+      // marcas dos anéis na direção mais livre (longe das cidades)
+      const usados = pts.map(t => t.ang), cands = [-67.5, -22.5, 22.5, 67.5, 112.5, 157.5, -157.5, -112.5];
+      const dist = (a, b) => { const d = Math.abs(((a - b) % 360 + 540) % 360 - 180); return d; };
+      const melhor = cands.reduce((m, c) => { const v = usados.length ? Math.min(...usados.map(u => dist(c, u))) : 180; return v > m[1] ? [c, v] : m; }, [cands[0], -1])[0] * Math.PI / 180;
+      // só mostra a marca se não encostar em outra marca nem em uma cidade
+      let ult = -99;
+      return aneis.map(k => {
+        const rr = raio(k), x = C + rr * Math.cos(melhor), y = C + rr * Math.sin(melhor) + 3;
+        const longeCidade = pts.every(t => Math.hypot(t.x - x, t.y - y) > 46 && Math.hypot(t.x + (Math.cos(t.ang * Math.PI / 180) >= -0.1 ? 40 : -40) - x, t.y - y) > 40);
+        const mostra = rr - ult >= 20 && longeCidade; if (mostra) ult = rr;
+        return `<circle cx="${C}" cy="${C}" r="${rr.toFixed(1)}" class="ring"/>` + (mostra ? `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle" class="rlab">${k} km</text>` : '');
+      }).join('');
+    })()}
     <line x1="${C}" y1="${C - R1 - 18}" x2="${C}" y2="${C + R1 + 18}" class="axis"/><line x1="${C - R1 - 18}" y1="${C}" x2="${C + R1 + 18}" y2="${C}" class="axis"/>
     <text x="${C}" y="16" class="card">N</text><text x="${C}" y="452" class="card">S</text><text x="451" y="${C + 4}" class="card">L</text><text x="9" y="${C + 4}" class="card">O</text>
     <g class="sweep"><path d="M${C} ${C} L${C} ${C - R1 - 18} A${R1 + 18} ${R1 + 18} 0 0 1 ${(C + (R1 + 18) * Math.sin(Math.PI / 5)).toFixed(1)} ${(C - (R1 + 18) * Math.cos(Math.PI / 5)).toFixed(1)} Z"/></g>
@@ -477,7 +494,8 @@ function distanciasDoTexto(t){
   return out;
 }
 function blocoLocal(p){
-  let ds = (p.distancias || []).filter(d => d.local && d.km);
+  const limpaKm = k => String(k || '').replace(/[^\d.,]/g, '').replace(/^[.,]+|[.,]+$/g, '');
+  let ds = (p.distancias || []).map(d => Object.assign({}, d, {km: limpaKm(d.km)})).filter(d => d.local && d.km);
   if (!ds.length) ds = distanciasDoTexto(p.localTexto);
   // sem endereço informado, usa a localização do anúncio (aproximada)
   const cid = (p.cidade || '').replace(/·/g, ',').trim();

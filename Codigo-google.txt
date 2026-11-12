@@ -189,7 +189,7 @@ function salvarPost(d, eu) {
     resumo: limpar(p.resumo, 160), etiqueta: limpar(p.etiqueta, 40),
     preco: limpar(p.preco, 40), descricao: limpar(p.descricao, 6000), mapa: limpar(p.mapa, 300),
     distancias: JSON.stringify((Array.isArray(p.distancias) ? p.distancias : []).slice(0, 6)
-      .map(x => ({ local: limpar(x.local, 40), km: limpar(x.km, 10), dir: ['N', 'NE', 'L', 'SE', 'S', 'SO', 'O', 'NO'].indexOf(x.dir) >= 0 ? x.dir : '' })).filter(x => x.local && x.km)),
+      .map(x => ({ local: limpar(x.local, 40), km: limpar(x.km, 10).replace(/[^\d.,]/g, ''), dir: ['N', 'NE', 'L', 'SE', 'S', 'SO', 'O', 'NO'].indexOf(x.dir) >= 0 ? x.dir : '' })).filter(x => x.local && x.km)),
     localTexto: limpar(p.localTexto, 400),
     midias: JSON.stringify(midias), status: p.status === 'publicado' ? 'publicado' : 'rascunho',
     destaque: p.destaque ? 'sim' : '', atualizado: agora()

@@ -327,7 +327,7 @@ function desenharDist(){
     <button type="button" class="ic danger" title="Remover">×</button></div>`).join('');
   $$('#eDist .drow').forEach(r => {
     const i = +r.dataset.i;
-    r.querySelectorAll('input,select').forEach(inp => inp.oninput = inp.onchange = () => { E.distancias[i][inp.dataset.k] = inp.value.trim(); });
+    r.querySelectorAll('input,select').forEach(inp => inp.oninput = inp.onchange = () => { if (inp.dataset.k === 'km'){ const v = inp.value.replace(/[^\d.,]/g, ''); if (v !== inp.value) inp.value = v; } E.distancias[i][inp.dataset.k] = inp.value.trim(); });
     r.querySelector('button').onclick = () => { E.distancias.splice(i, 1); desenharDist(); };
   });
 }
