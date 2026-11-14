@@ -306,11 +306,32 @@ function verbo(p){
   const art = /^(fazenda|chacara|casa|area|ilha)/.test(c) ? 'a' : 'o';
   return c === 'imovel' ? 'Conhecer o imóvel' : `Conhecer ${art} ${catDe(p).toLowerCase()}`;
 }
+// vídeo da capa nos cartões: carrega e toca só quando o cartão aparece na tela
+function videoCartao(p, cls){
+  const m = (p.midias || [])[0]; if (!m || m.tipo !== 'video') return '';
+  const src = Midia.arquivoVideo(m); if (!src) return '';
+  return `<video class="${cls} cvid" data-src="${esc(src)}" muted loop playsinline preload="none" aria-hidden="true"></video>`;
+}
+const CVID = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => {
+  const v = e.target;
+  if (e.isIntersecting){
+    if (!v.src){ v.muted = true; v.addEventListener('playing', () => v.classList.add('on'), {once: true}); v.addEventListener('error', () => v.remove(), {once: true}); v.src = v.dataset.src; }
+    v.play().catch(() => {});
+  } else if (!v.paused) v.pause();
+}), {rootMargin: '150px'}) : null;
+function ativarVideosCartoes(raiz){
+  (raiz || document).querySelectorAll('video.cvid:not([data-obs])').forEach(v => {
+    v.dataset.obs = 1;
+    if (CVID) CVID.observe(v); else { v.src = v.dataset.src; v.play().catch(() => {}); }
+  });
+}
+new MutationObserver(() => ativarVideosCartoes()).observe(document.documentElement, {childList: true, subtree: true});
+
 function cartao(p, mini){
   const capa = Midia.capa(p);
   if (mini) return `
     <article class="scard" data-post="${esc(p.id)}" tabindex="0">
-      <div class="ph">${capa ? `<img src="${esc(capa)}" alt="" loading="lazy">` : '<div class="noimg"><svg><use href="#i-casa"/></svg></div>'}${SIT[p.situacao] ? `<span class="sit ${p.situacao}">${SIT[p.situacao]}</span>` : ''}</div>
+      <div class="ph">${capa ? `<img src="${esc(capa)}" alt="" loading="lazy">` : '<div class="noimg"><svg><use href="#i-casa"/></svg></div>'}${videoCartao(p, 'svid')}${SIT[p.situacao] ? `<span class="sit ${p.situacao}">${SIT[p.situacao]}</span>` : ''}</div>
       <div class="bd"><span class="lo">${esc(p.cidade || catDe(p))}</span><h3>${esc(p.titulo)}</h3>
         ${p.resumo || p.preco ? `<p>${esc([p.preco, p.resumo].filter(Boolean).join(' · '))}</p>` : ''}
         <span class="lk">Ver imóvel ↗</span></div>
@@ -318,6 +339,7 @@ function cartao(p, mini){
   return `
     <article class="pcard${p.destaque ? ' hl' : ''}${p.formato === 'largo' ? ' wide' : ''}${p.situacao === 'vendido' ? ' sold' : ''}" data-post="${esc(p.id)}" tabindex="0">
       ${capa ? `<img src="${esc(capa)}" alt="${esc(p.titulo)}" loading="lazy">` : '<div class="noimg"><svg><use href="#i-casa"/></svg></div>'}
+      ${videoCartao(p, 'pvid')}
       <div class="badges">${selos(p)}</div>
       ${SIT[p.situacao] ? `<span class="sit ${p.situacao}">${SIT[p.situacao]}</span>` : (Midia.temVideo(p) ? '<span class="play" title="Tem vídeo">▶</span>' : '')}
       <button type="button" class="fav${ehFav(p.id) ? ' on' : ''}" data-fav="${esc(p.id)}" aria-label="Salvar nos favoritos" title="Salvar nos favoritos"><svg><use href="#i-heart"/></svg></button>

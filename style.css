@@ -985,4 +985,10 @@ button.restrito.loading svg{animation:gira .8s linear infinite}
 .ph2-som .o{display:none}.ph2-som.ligado .o{display:inline}.ph2-som.ligado .x{display:none}
 @media(max-width:760px){.ph2-som{right:14px;top:126px;padding:8px 12px}.ph2-som span{display:none}}
 
+/* ===== V24 · vídeo rodando nos cartões ===== */
+.pcard>.pvid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-1;opacity:0;transition:opacity .9s ease,transform 1.2s cubic-bezier(.2,.7,.2,1);pointer-events:none}
+.pcard:hover>.pvid,.pcard:focus-visible>.pvid{transform:scale(1.05)}
+.scard .ph .svid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .9s ease;pointer-events:none}
+.cvid.on{opacity:1}
+
 @media(max-width:620px){.menu{top:84px}}
