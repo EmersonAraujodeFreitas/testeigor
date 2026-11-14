@@ -948,4 +948,28 @@ button.restrito.loading svg{animation:gira .8s linear infinite}
 @media(max-width:1020px){.mapa-grid{grid-template-columns:1fr}.mapa-side{max-height:none}#mapaGeral{height:60vh}}
 @media(max-width:620px){#mapaGeral{height:56vh;min-height:360px}.fbrand .cnpj+.cnpj{margin-left:0}}
 
+/* ===== V22 · planta do loteamento no site ===== */
+.pl-sec .pl-tabs{flex-wrap:wrap;max-width:100%}
+.pl-view{border-radius:18px;overflow:hidden;border:1px solid var(--line2);background:#1e2227}
+.pl-img{display:block;position:relative;width:100%;padding:0;border:0;cursor:zoom-in;background:#f4f1ea}
+.pl-img img{display:block;width:100%;max-height:560px;object-fit:contain}
+.pl-hint{position:absolute;right:12px;bottom:12px;display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:999px;background:#111418d9;color:#fff;font-size:12.5px;font-weight:700;backdrop-filter:blur(6px)}
+.pl-hint svg{width:15px;height:15px}
+.pl-noimg{display:flex;flex-direction:column;align-items:center;gap:10px;padding:46px 16px;background:#f4f1ea;color:#49505a}
+.pl-noimg span{font-weight:800;color:#fff;background:#c0392b;padding:8px 14px;border-radius:8px;letter-spacing:.06em}
+.pl-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 16px;border-top:1px solid var(--line2)}
+.pl-bar>span{flex:1 1 200px;min-width:0;display:flex;flex-direction:column}
+.pl-bar small{color:var(--muted);font-size:12.5px}
+.pz{position:fixed;inset:0;z-index:95;background:#0b0d0f;display:none;flex-direction:column}
+.pz.show{display:flex}
+.pz-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;color:#fff}
+.pz-top b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pz-ctl{display:flex;gap:8px;flex-shrink:0}
+.pz-ctl button{width:42px;height:42px;border-radius:12px;border:1px solid #ffffff26;background:#ffffff12;color:#fff;font-size:20px;cursor:pointer}
+.pz-ctl button:hover{background:#ffffff24}
+.pz-area{flex:1;overflow:hidden;display:grid;place-items:center;touch-action:none;cursor:grab;background:#f4f1ea}
+.pz-area:active{cursor:grabbing}
+.pz-area img{max-width:100%;max-height:100%;object-fit:contain;transform-origin:center;user-select:none;will-change:transform}
+.pz-dica{text-align:center;color:#ffffffa6;font-size:12.5px;padding:10px 16px}
+
 @media(max-width:620px){.menu{top:84px}}

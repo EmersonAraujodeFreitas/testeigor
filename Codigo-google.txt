@@ -19,11 +19,11 @@ const DONO = { usuario: 'igor', nome: 'Igor Ribeiro' };
 const SESSAO_SEG = 6 * 60 * 60;          // 6 horas
 const MAX_TENTATIVAS = 5;
 const ITERACOES = 1500;                 // não altere: senhas já salvas dependem deste número                 // tentativas de login antes de bloquear por 15 min
-const TIPOS_MIDIA = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/quicktime', 'video/webm'];
+const TIPOS_MIDIA = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/quicktime', 'video/webm', 'application/pdf'];
 
 const ABAS = {
   Usuarios: ['id', 'usuario', 'nome', 'papel', 'status', 'salt', 'hash', 'criado', 'ultimoAcesso'],
-  Posts:    ['id', 'tipo', 'titulo', 'categoria', 'cidade', 'resumo', 'etiqueta', 'preco', 'descricao', 'distancias', 'localTexto', 'mapa', 'ficha', 'situacao', 'formato', 'midias', 'status', 'destaque', 'ordem', 'autor', 'criado', 'atualizado', 'views', 'lat', 'lng', 'publicarEm'],
+  Posts:    ['id', 'tipo', 'titulo', 'categoria', 'cidade', 'resumo', 'etiqueta', 'preco', 'descricao', 'distancias', 'localTexto', 'mapa', 'ficha', 'situacao', 'formato', 'midias', 'status', 'destaque', 'ordem', 'autor', 'criado', 'atualizado', 'views', 'lat', 'lng', 'publicarEm', 'plantas'],
   Log:      ['data', 'usuario', 'acao', 'detalhe'],
   Contatos: ['Data', 'Nome', 'WhatsApp', 'Mensagem', 'Página', 'Chamar no WhatsApp', 'Status', 'Obs', 'Imóvel', 'Tipo', 'Região', 'Valor', 'Área', 'Pesquisou', 'Também viu', 'Link do imóvel'],
   Visitas:  ['Data', 'Imóvel', 'ImóvelId', 'Dia', 'Período', 'Nome', 'WhatsApp', 'Status', 'Obs']
@@ -217,6 +217,9 @@ function salvarPost(d, eu) {
   if (titulo.length < 2) throw new Error('Informe um título.');
   let midias = Array.isArray(p.midias) ? p.midias.slice(0, 30) : [];
   midias = midias.map(m => ({ tipo: limpar(m.tipo, 10), id: limpar(m.id, 80), url: limpar(m.url, 500) })).filter(m => m.url || m.id);
+  const plantas = (Array.isArray(p.plantas) ? p.plantas.slice(0, 8) : [])
+    .map(m => ({ tipo: m.tipo === 'pdf' ? 'pdf' : 'imagem', id: limpar(m.id, 80), url: limpar(m.url, 500), nome: limpar(m.nome, 60) }))
+    .filter(m => /^https:\/\//.test(m.url));
   const dados = {
     tipo: ['divulgacao', 'lancamento'].indexOf(p.tipo) >= 0 ? p.tipo : 'imovel',
     situacao: ['reservado', 'vendido'].indexOf(p.situacao) >= 0 ? p.situacao : 'disponivel',
@@ -230,7 +233,7 @@ function salvarPost(d, eu) {
     distancias: JSON.stringify((Array.isArray(p.distancias) ? p.distancias : []).slice(0, 6)
       .map(x => ({ local: limpar(x.local, 40), km: limpar(x.km, 10).replace(/[^\d.,]/g, ''), dir: ['N', 'NE', 'L', 'SE', 'S', 'SO', 'O', 'NO'].indexOf(x.dir) >= 0 ? x.dir : '' })).filter(x => x.local && x.km)),
     localTexto: limpar(p.localTexto, 400),
-    midias: JSON.stringify(midias), status: p.status === 'publicado' ? 'publicado' : 'rascunho',
+    midias: JSON.stringify(midias), plantas: JSON.stringify(plantas), status: p.status === 'publicado' ? 'publicado' : 'rascunho',
     destaque: p.destaque ? 'sim' : '', atualizado: agora()
   };
   const lock = LockService.getScriptLock(); lock.waitLock(20000);
@@ -248,7 +251,7 @@ function salvarPost(d, eu) {
 function excluirPost(d, eu) {
   const p = linhas('Posts').find(x => x.id === d.id); if (!p) throw new Error('Postagem não encontrada.');
   if (d.apagarArquivos) {
-    JSON.parse(p.midias || '[]').forEach(m => { if (m.id && m.tipo !== 'youtube') try { DriveApp.getFileById(m.id).setTrashed(true); } catch (_) {} });
+    JSON.parse(p.midias || '[]').concat(JSON.parse(p.plantas || '[]')).forEach(m => { if (m.id && m.tipo !== 'youtube') try { DriveApp.getFileById(m.id).setTrashed(true); } catch (_) {} });
   }
   apagarLinha('Posts', p.id); log(eu.usuario, 'excluiu postagem', p.titulo);
 }
@@ -275,9 +278,10 @@ function enviarMidia(d, eu) {
   const blob = Utilities.newBlob(Utilities.base64Decode(b64), mime, limpar(d.nome, 100).replace(/[^\w.\- ]/g, '') || 'arquivo');
   const arq = pasta().createFile(blob);
   arq.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-  const id = arq.getId(), video = mime.indexOf('video') === 0;
-  log(eu.usuario, 'enviou arquivo', arq.getName());
-  return { midia: { tipo: video ? 'video' : 'imagem', id, url: video ? 'https://drive.google.com/file/d/' + id + '/preview' : 'https://drive.google.com/thumbnail?id=' + id + '&sz=w1600' } };
+  const id = arq.getId(), video = mime.indexOf('video') === 0, pdf = mime === 'application/pdf';
+  log(eu.usuario, d.planta ? 'enviou planta' : 'enviou arquivo', arq.getName());
+  if (pdf) return { midia: { tipo: 'pdf', id, url: 'https://drive.google.com/file/d/' + id + '/preview' } };
+  return { midia: { tipo: video ? 'video' : 'imagem', id, url: video ? 'https://drive.google.com/file/d/' + id + '/preview' : 'https://drive.google.com/thumbnail?id=' + id + '&sz=' + (d.planta ? 'w2600' : 'w1600') } };
 }
 
 /* ================= CONFIGURAÇÕES DO SITE (só o dono) ================= */
@@ -378,8 +382,8 @@ function hash(senha, salt) {
 }
 function publicoUsuario(u) { return { id: u.id, usuario: u.usuario, nome: u.nome, papel: u.papel, status: u.status, criado: u.criado, ultimoAcesso: u.ultimoAcesso, protegido: u.usuario === DONO.usuario }; }
 function formatarPost(p) {
-  let m = [], ds = [], fi = []; try { m = JSON.parse(p.midias || '[]'); } catch (_) {} try { ds = JSON.parse(p.distancias || '[]'); } catch (_) {} try { fi = JSON.parse(p.ficha || '[]'); } catch (_) {}
-  return { id: p.id, tipo: p.tipo, titulo: p.titulo, categoria: p.categoria, cidade: p.cidade, resumo: p.resumo, etiqueta: p.etiqueta, preco: p.preco, descricao: p.descricao, distancias: ds, localTexto: p.localTexto, mapa: p.mapa, ficha: fi, situacao: p.situacao || 'disponivel', formato: p.formato || 'padrao', midias: m, status: p.status, destaque: p.destaque === 'sim', ordem: Number(p.ordem) || 0, autor: p.autor, criado: p.criado, atualizado: p.atualizado, views: Number(p.views) || 0, lat: p.lat === '' ? null : Number(p.lat), lng: p.lng === '' ? null : Number(p.lng), publicarEm: p.publicarEm || '' };
+  let m = [], ds = [], fi = [], pl = []; try { m = JSON.parse(p.midias || '[]'); } catch (_) {} try { pl = JSON.parse(p.plantas || '[]'); } catch (_) {} try { ds = JSON.parse(p.distancias || '[]'); } catch (_) {} try { fi = JSON.parse(p.ficha || '[]'); } catch (_) {}
+  return { id: p.id, tipo: p.tipo, titulo: p.titulo, categoria: p.categoria, cidade: p.cidade, resumo: p.resumo, etiqueta: p.etiqueta, preco: p.preco, descricao: p.descricao, distancias: ds, localTexto: p.localTexto, mapa: p.mapa, ficha: fi, plantas: pl, situacao: p.situacao || 'disponivel', formato: p.formato || 'padrao', midias: m, status: p.status, destaque: p.destaque === 'sim', ordem: Number(p.ordem) || 0, autor: p.autor, criado: p.criado, atualizado: p.atualizado, views: Number(p.views) || 0, lat: p.lat === '' ? null : Number(p.lat), lng: p.lng === '' ? null : Number(p.lng), publicarEm: p.publicarEm || '' };
 }
 function ordenar(l) { return l.sort((a, b) => (Number(a.ordem) || 0) - (Number(b.ordem) || 0)); }
 function pasta() {

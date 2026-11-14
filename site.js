@@ -346,6 +346,7 @@ function abrirImovel(id){
   window.IMOVEL_ATUAL = p;
   const atual = $('.tab:not([hidden])'); if (atual && atual.dataset.aba !== 'detalhe') abaAnterior = atual.dataset.aba;
   const ms = p.midias || [];
+  const plantas = (p.plantas || []).filter(x => x && x.url);
   const fotos = ms.map((m, i) => ({m, i})).filter(x => x.m.tipo === 'imagem');
   const videos = ms.map((m, i) => ({m, i})).filter(x => x.m.tipo !== 'imagem');
   const capa = Midia.capa(p);
@@ -416,6 +417,12 @@ function abrirImovel(id){
           <div class="mz-grid" data-mzp="f">${mosaico(fotos.length ? fotos : videos)}</div>
           ${fotos.length && videos.length ? `<div class="mz-grid" data-mzp="v" hidden>${mosaico(videos)}</div>` : ''}
         </section>` : ''}
+        ${plantas.length ? `
+        <section class="d2-sec pl-sec" id="sec-planta">
+          <div class="mz-head"><div><span class="eyebrow">Implantação</span><h2>${/lote/i.test(p.categoria || '') ? 'Planta do loteamento' : 'Planta do imóvel'}</h2></div>
+            ${plantas.length > 1 ? `<div class="lc-tabs pl-tabs">${plantas.map((x, k) => `<button type="button" class="${k ? '' : 'on'}" data-pl="${k}">${esc(x.nome || 'Planta ' + (k + 1))}</button>`).join('')}</div>` : ''}</div>
+          <div class="pl-view" id="plView"></div>
+        </section>` : ''}
       </div>
       <aside class="d2-side" id="sec-contato">
         <div class="vis">
@@ -448,6 +455,23 @@ function abrirImovel(id){
 
   const body = $('#detalheBody');
   body.querySelectorAll('[data-galeria]').forEach(b => b.onclick = () => lightbox(ms, +b.dataset.galeria));
+  if (plantas.length){
+    const verPlanta = k => {
+      const x = plantas[k], nome = x.nome || 'Planta ' + (k + 1);
+      const img = x.tipo === 'pdf' ? (x.id && !/^demo/.test(x.id) ? 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(x.id) + '&sz=w1600' : '') : x.url;
+      const abrirPdf = x.tipo === 'pdf' ? String(x.url).replace(/\/preview$/, '/view') : '';
+      $('#plView').innerHTML = `
+        ${img ? `<button type="button" class="pl-img" data-plzoom aria-label="Ampliar a planta"><img src="${esc(img)}" alt="${esc(nome)}" loading="lazy">
+          <span class="pl-hint"><svg><use href="#i-search"/></svg>${x.tipo === 'pdf' ? 'Toque para abrir o PDF' : 'Toque para ampliar'}</span></button>`
+          : `<div class="pl-noimg"><span>PDF</span><b>${esc(nome)}</b></div>`}
+        <div class="pl-bar"><span><b>${esc(nome)}</b><small>${x.tipo === 'pdf' ? 'Documento em PDF' : 'Use o zoom para ver quadras e lotes'}</small></span>
+          ${x.tipo === 'pdf' ? `<a class="btn btn-ghost sm" href="${esc(abrirPdf)}" target="_blank" rel="noopener">Abrir PDF</a>` : '<button type="button" class="btn btn-ghost sm" data-plzoom>Ampliar planta</button>'}
+          <button type="button" class="btn btn-gold sm" data-chat="${interesse}">Consultar lotes</button></div>`;
+      $('#plView').querySelectorAll('[data-plzoom]').forEach(b => b.onclick = () => x.tipo === 'pdf' ? window.open(abrirPdf, '_blank', 'noopener') : zoomPlanta(x.url, nome));
+    };
+    body.querySelectorAll('[data-pl]').forEach(b => b.onclick = () => { body.querySelectorAll('[data-pl]').forEach(o => o.classList.toggle('on', o === b)); verPlanta(+b.dataset.pl); });
+    verPlanta(0);
+  }
   body.querySelectorAll('.mz').forEach(b => b.onclick = () => lightbox(ms, +b.dataset.i));
   body.querySelectorAll('[data-mz]').forEach(b => b.onclick = () => {
     body.querySelectorAll('[data-mz]').forEach(x => x.classList.toggle('on', x === b));
@@ -599,6 +623,48 @@ function ligarLocal(raiz){
     const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting){ sec.classList.add('vis'); io.disconnect(); } }), {threshold:.2});
     io.observe(sec);
   } else if (sec) sec.classList.add('vis');
+}
+
+/* ===== PLANTA COM ZOOM (arrastar, pinça, roda do mouse) ===== */
+function zoomPlanta(src, nome){
+  let z = $('#pz');
+  if (!z){
+    document.body.insertAdjacentHTML('beforeend', `<div class="pz" id="pz" role="dialog" aria-modal="true" aria-label="Planta ampliada">
+      <div class="pz-top"><b id="pzNome"></b><div class="pz-ctl"><button type="button" data-z="-" aria-label="Diminuir">−</button><button type="button" data-z="0" aria-label="Ajustar à tela">⤢</button><button type="button" data-z="+" aria-label="Aumentar">+</button><button type="button" class="pz-x" aria-label="Fechar">×</button></div></div>
+      <div class="pz-area" id="pzArea"><img id="pzImg" alt="" draggable="false"></div>
+      <div class="pz-dica">Arraste para mover · use dois dedos ou a roda do mouse para o zoom</div></div>`);
+    z = $('#pz');
+    const area = $('#pzArea'), img = $('#pzImg'), pts = new Map();
+    let S = {k: 1, x: 0, y: 0}, ini = null;
+    const aplicar = () => { img.style.transform = `translate(${S.x}px, ${S.y}px) scale(${S.k})`; };
+    const zoomEm = (f, cx, cy) => {
+      const r = area.getBoundingClientRect(), px = cx - r.left - r.width / 2, py = cy - r.top - r.height / 2;
+      const k = Math.min(8, Math.max(1, S.k * f)), q = k / S.k;
+      S.x = px - (px - S.x) * q; S.y = py - (py - S.y) * q; S.k = k; if (k === 1) S.x = S.y = 0; aplicar();
+    };
+    z.resetar = () => { S = {k: 1, x: 0, y: 0}; aplicar(); };
+    area.addEventListener('wheel', e => { e.preventDefault(); zoomEm(e.deltaY < 0 ? 1.2 : 1 / 1.2, e.clientX, e.clientY); }, {passive: false});
+    area.addEventListener('dblclick', e => S.k > 1 ? z.resetar() : zoomEm(2.5, e.clientX, e.clientY));
+    area.addEventListener('pointerdown', e => { area.setPointerCapture(e.pointerId); pts.set(e.pointerId, {x: e.clientX, y: e.clientY}); ini = null; });
+    area.addEventListener('pointermove', e => {
+      if (!pts.has(e.pointerId)) return;
+      const ant = pts.get(e.pointerId); pts.set(e.pointerId, {x: e.clientX, y: e.clientY});
+      if (pts.size === 1){ S.x += e.clientX - ant.x; S.y += e.clientY - ant.y; aplicar(); }
+      else if (pts.size === 2){
+        const [a, b] = [...pts.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (ini) zoomEm(d / ini, (a.x + b.x) / 2, (a.y + b.y) / 2); ini = d;
+      }
+    });
+    const solta = e => { pts.delete(e.pointerId); ini = null; };
+    area.addEventListener('pointerup', solta); area.addEventListener('pointercancel', solta);
+    z.querySelectorAll('[data-z]').forEach(b => b.onclick = () => { const r = area.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      b.dataset.z === '0' ? z.resetar() : zoomEm(b.dataset.z === '+' ? 1.5 : 1 / 1.5, cx, cy); });
+    const fechar = () => { z.classList.remove('show'); document.body.style.overflow = ''; };
+    z.querySelector('.pz-x').onclick = fechar;
+    document.addEventListener('keydown', e => { if (!z.classList.contains('show')) return; if (e.key === 'Escape') fechar(); if (e.key === '+' || e.key === '=') zoomEm(1.4, innerWidth / 2, innerHeight / 2); if (e.key === '-') zoomEm(1 / 1.4, innerWidth / 2, innerHeight / 2); });
+  }
+  $('#pzNome').textContent = nome || 'Planta'; $('#pzImg').src = src; $('#pzImg').alt = nome || 'Planta';
+  z.resetar(); z.classList.add('show'); document.body.style.overflow = 'hidden';
 }
 
 /* ===== GALERIA AMPLIADA ===== */
@@ -1167,7 +1233,11 @@ const I18N = (() => {
     ['Praias', 'Beaches', 'Playas'], ['Terrenos com lago', 'Land with lakes', 'Terrenos con lago'], ['Fazendas', 'Farms', 'Haciendas'], ['Litoral', 'Coastline', 'Litoral'], ['Rios e natureza', 'Rivers and nature', 'Ríos y naturaleza'],
     ['Ver as fotos', 'See the photos', 'Ver las fotos'], ['Assistir ao vídeo', 'Watch the video', 'Ver el video'], ['Valor', 'Price', 'Valor'],
     ['Sobre o imóvel', 'About the property', 'Sobre el inmueble'], ['Conheça', 'Discover', 'Conozca'], ['cada detalhe', 'every detail', 'cada detalle'], ['os detalhes', 'the details', 'los detalles'],
-    ['Galeria', 'Gallery', 'Galería'], ['Fotos e vídeos', 'Photos and videos', 'Fotos y videos'],
+    ['Galeria', 'Gallery', 'Galería'], ['Implantação', 'Site plan', 'Implantación'], ['Planta do loteamento', 'Subdivision plan', 'Plano del loteo'], ['Planta do imóvel', 'Property plan', 'Plano de la propiedad'],
+    ['Toque para ampliar', 'Tap to zoom', 'Toca para ampliar'], ['Toque para abrir o PDF', 'Tap to open the PDF', 'Toca para abrir el PDF'], ['Abrir PDF', 'Open PDF', 'Abrir PDF'],
+    ['Ampliar planta', 'Zoom plan', 'Ampliar plano'], ['Consultar lotes', 'Ask about lots', 'Consultar lotes'], ['Documento em PDF', 'PDF document', 'Documento PDF'],
+    ['Use o zoom para ver quadras e lotes', 'Zoom in to see blocks and lots', 'Usa el zoom para ver manzanas y lotes'],
+    ['Arraste para mover · use dois dedos ou a roda do mouse para o zoom', 'Drag to move · pinch or use the mouse wheel to zoom', 'Arrastra para mover · usa dos dedos o la rueda del mouse para el zoom'], ['Fotos e vídeos', 'Photos and videos', 'Fotos y videos'],
     ['Visita guiada', 'Guided visit', 'Visita guiada'], ['Agende sua visita', 'Schedule your visit', 'Agende su visita'],
     ['Escolha o melhor dia e período. A nossa equipe confirma com você pelo WhatsApp.', 'Choose the best day and time. Our team will confirm with you on WhatsApp.', 'Elija el mejor día y período. Nuestro equipo le confirma por WhatsApp.'],
     ['Dia', 'Day', 'Día'], ['Período', 'Time', 'Período'], ['Manhã', 'Morning', 'Mañana'], ['Tarde', 'Afternoon', 'Tarde'],
