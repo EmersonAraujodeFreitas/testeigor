@@ -30,6 +30,7 @@ const Midia = {
     for (const m of (p.midias || [])){
       if (m.tipo === 'imagem') return m.url;
       if (m.tipo === 'youtube') return 'https://img.youtube.com/vi/' + m.id + '/hqdefault.jpg';
+      if (m.tipo === 'video' && m.poster) return m.poster;
       if (m.tipo === 'video' && m.id && !/^demo/.test(m.id)) return 'https://drive.google.com/thumbnail?id=' + m.id + '&sz=w1200';
     }
     return '';
@@ -54,7 +55,7 @@ const Midia = {
     if (m.tipo === 'video'){
       // toca o arquivo direto (não depende do processamento do Google Drive); se falhar, usa o player do Drive
       const arq = Midia.arquivoVideo(m);
-      if (arq) return `<video src="${esc(arq)}" controls autoplay playsinline preload="auto"${arq !== m.url ? ` data-alt="${u}"` : ''}></video>`;
+      if (arq) return `<video src="${esc(arq)}" controls autoplay playsinline preload="auto"${m.poster ? ` poster="${esc(m.poster)}"` : ''}${arq !== m.url ? ` data-alt="${u}"` : ''}></video>`;
       return `<iframe src="${u}" allow="autoplay" allowfullscreen loading="lazy"></iframe>`;
     }
     return `<a class="btn btn-ghost" href="${u}" target="_blank" rel="noopener">Abrir conteúdo</a>`;

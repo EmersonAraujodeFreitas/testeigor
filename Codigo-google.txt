@@ -19,7 +19,7 @@ const DONO = { usuario: 'igor', nome: 'Igor Ribeiro' };
 const SESSAO_SEG = 6 * 60 * 60;          // 6 horas
 const MAX_TENTATIVAS = 5;
 const ITERACOES = 1500;                 // não altere: senhas já salvas dependem deste número                 // tentativas de login antes de bloquear por 15 min
-const TIPOS_MIDIA = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/quicktime', 'video/webm', 'application/pdf'];
+const TIPOS_MIDIA = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/quicktime', 'video/webm', 'video/x-matroska', 'video/x-msvideo', 'video/x-ms-wmv', 'video/3gpp', 'video/x-m4v', 'video/mpeg', 'video/x-flv', 'video/mp2t', 'application/pdf'];
 
 const ABAS = {
   Usuarios: ['id', 'usuario', 'nome', 'papel', 'status', 'salt', 'hash', 'criado', 'ultimoAcesso'],
@@ -216,7 +216,9 @@ function salvarPost(d, eu) {
   const titulo = limpar(p.titulo, 120);
   if (titulo.length < 2) throw new Error('Informe um título.');
   let midias = Array.isArray(p.midias) ? p.midias.slice(0, 30) : [];
-  midias = midias.map(m => ({ tipo: limpar(m.tipo, 10), id: limpar(m.id, 80), url: limpar(m.url, 500) })).filter(m => m.url || m.id);
+  midias = midias.map(m => { const o = { tipo: limpar(m.tipo, 10), id: limpar(m.id, 80), url: limpar(m.url, 500) };
+    if (/^https:\/\//.test(String(m.poster || ''))) { o.poster = limpar(m.poster, 500); o.posterId = limpar(m.posterId, 80); }
+    return o; }).filter(m => m.url || m.id);
   const plantas = (Array.isArray(p.plantas) ? p.plantas.slice(0, 8) : [])
     .map(m => ({ tipo: m.tipo === 'pdf' ? 'pdf' : 'imagem', id: limpar(m.id, 80), url: limpar(m.url, 500), nome: limpar(m.nome, 60) }))
     .filter(m => /^https:\/\//.test(m.url));
@@ -251,7 +253,7 @@ function salvarPost(d, eu) {
 function excluirPost(d, eu) {
   const p = linhas('Posts').find(x => x.id === d.id); if (!p) throw new Error('Postagem não encontrada.');
   if (d.apagarArquivos) {
-    JSON.parse(p.midias || '[]').concat(JSON.parse(p.plantas || '[]')).forEach(m => { if (m.id && m.tipo !== 'youtube') try { DriveApp.getFileById(m.id).setTrashed(true); } catch (_) {} });
+    JSON.parse(p.midias || '[]').concat(JSON.parse(p.plantas || '[]')).forEach(m => { [m.tipo !== 'youtube' && m.id, m.posterId].forEach(id => { if (id) try { DriveApp.getFileById(id).setTrashed(true); } catch (_) {} }); });
   }
   apagarLinha('Posts', p.id); log(eu.usuario, 'excluiu postagem', p.titulo);
 }
