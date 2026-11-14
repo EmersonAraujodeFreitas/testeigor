@@ -34,6 +34,18 @@ const Midia = {
     }
     return '';
   },
+  // endereço que o <video> consegue tocar direto (arquivo do Drive ou link .mp4)
+  arquivoVideo(m){
+    if (/^(data:|blob:)/.test(m.url) || /\.(mp4|webm|mov|m4v)(\?|$)/i.test(m.url)) return m.url;
+    const id = m.id && !/^demo/.test(m.id) ? m.id : (String(m.url).match(/\/file\/d\/([\w-]{20,})/) || [])[1];
+    return id ? 'https://drive.google.com/uc?export=download&id=' + encodeURIComponent(id) : '';
+  },
+  fundo(m){
+    if (!m) return '';
+    if (m.tipo === 'youtube' && m.id) return `<div class="ph2-yt" aria-hidden="true"><iframe src="https://www.youtube-nocookie.com/embed/${esc(m.id)}?autoplay=1&mute=1&loop=1&playlist=${esc(m.id)}&controls=0&playsinline=1&rel=0&modestbranding=1&disablekb=1&iv_load_policy=3&fs=0" allow="autoplay; encrypted-media" tabindex="-1" title="Vídeo de fundo"></iframe></div>`;
+    if (m.tipo === 'video'){ const src = Midia.arquivoVideo(m); return src ? `<video class="ph2-vid" src="${esc(src)}" muted autoplay loop playsinline preload="auto" aria-hidden="true"></video>` : ''; }
+    return '';
+  },
   temVideo(p){ return (p.midias || []).some(m => m.tipo === 'video' || m.tipo === 'youtube'); },
   html(m){
     const u = esc(m.url);
@@ -355,6 +367,7 @@ function abrirImovel(id){
   const ficha = (p.ficha || []).filter(f => f.rotulo && f.valor);
   const rapidos = ficha.slice(0, 3);
   const local = blocoLocal(p);
+  const capaVideo = ms[0] && (ms[0].tipo === 'video' || ms[0].tipo === 'youtube') ? ms[0] : null;
   const interesse = esc('Olá! Tenho interesse em: ' + p.titulo + (p.cidade ? ' (' + p.cidade + ')' : '') + '.');
   const sim = (() => {
     const outros = POSTS.filter(x => x.id !== p.id);
@@ -370,7 +383,8 @@ function abrirImovel(id){
 
   $('#detalheBody').innerHTML = `
     <section class="ph2${capa ? '' : ' sem'}">
-      <div class="ph2-media">${capa ? `<img src="${esc(capa)}" alt="${esc(p.titulo)}">` : ''}</div>
+      <div class="ph2-media">${capa ? `<img src="${esc(capa)}" alt="${esc(p.titulo)}">` : ''}${Midia.fundo(capaVideo)}</div>
+      ${capaVideo && capaVideo.tipo === 'video' ? '<button type="button" class="ph2-som" id="ph2Som" hidden aria-label="Ativar o som do vídeo"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path class="x" d="M16 9l5 6M21 9l-5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="o" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg><span>Ativar som</span></button>' : ''}
       <div class="wrap ph2-in">
         <button class="voltar2" data-tab="${abaAnterior}">← Voltar</button>
         <div class="ph2-txt">
@@ -455,6 +469,19 @@ function abrirImovel(id){
 
   const body = $('#detalheBody');
   body.querySelectorAll('[data-galeria]').forEach(b => b.onclick = () => lightbox(ms, +b.dataset.galeria));
+  // vídeo da capa rodando no fundo (sem som; botão para ativar o som)
+  const vf = body.querySelector('.ph2-vid'), yf = body.querySelector('.ph2-yt');
+  if (vf){
+    vf.muted = true; vf.defaultMuted = true;
+    const ok = () => { vf.classList.add('on'); const sb = $('#ph2Som'); if (sb) sb.hidden = false; };
+    vf.addEventListener('playing', ok, {once: true});
+    vf.addEventListener('error', () => vf.remove());
+    const tentar = () => vf.play().catch(() => {});
+    tentar(); document.addEventListener('pointerdown', tentar, {once: true});
+    const sb = $('#ph2Som');
+    if (sb) sb.onclick = () => { vf.muted = !vf.muted; if (!vf.muted) vf.play().catch(() => {}); sb.classList.toggle('ligado', !vf.muted); sb.querySelector('span').textContent = vf.muted ? 'Ativar som' : 'Desativar som'; sb.setAttribute('aria-label', vf.muted ? 'Ativar o som do vídeo' : 'Desativar o som do vídeo'); };
+  }
+  if (yf){ const fr = yf.querySelector('iframe'); fr.addEventListener('load', () => setTimeout(() => yf.classList.add('on'), 1200), {once: true}); }
   if (plantas.length){
     const verPlanta = k => {
       const x = plantas[k], nome = x.nome || 'Planta ' + (k + 1);
@@ -1233,7 +1260,7 @@ const I18N = (() => {
     ['Praias', 'Beaches', 'Playas'], ['Terrenos com lago', 'Land with lakes', 'Terrenos con lago'], ['Fazendas', 'Farms', 'Haciendas'], ['Litoral', 'Coastline', 'Litoral'], ['Rios e natureza', 'Rivers and nature', 'Ríos y naturaleza'],
     ['Ver as fotos', 'See the photos', 'Ver las fotos'], ['Assistir ao vídeo', 'Watch the video', 'Ver el video'], ['Valor', 'Price', 'Valor'],
     ['Sobre o imóvel', 'About the property', 'Sobre el inmueble'], ['Conheça', 'Discover', 'Conozca'], ['cada detalhe', 'every detail', 'cada detalle'], ['os detalhes', 'the details', 'los detalles'],
-    ['Galeria', 'Gallery', 'Galería'], ['Implantação', 'Site plan', 'Implantación'], ['Planta do loteamento', 'Subdivision plan', 'Plano del loteo'], ['Planta do imóvel', 'Property plan', 'Plano de la propiedad'],
+    ['Galeria', 'Gallery', 'Galería'], ['Ativar som', 'Sound on', 'Activar sonido'], ['Desativar som', 'Sound off', 'Desactivar sonido'], ['Implantação', 'Site plan', 'Implantación'], ['Planta do loteamento', 'Subdivision plan', 'Plano del loteo'], ['Planta do imóvel', 'Property plan', 'Plano de la propiedad'],
     ['Toque para ampliar', 'Tap to zoom', 'Toca para ampliar'], ['Toque para abrir o PDF', 'Tap to open the PDF', 'Toca para abrir el PDF'], ['Abrir PDF', 'Open PDF', 'Abrir PDF'],
     ['Ampliar planta', 'Zoom plan', 'Ampliar plano'], ['Consultar lotes', 'Ask about lots', 'Consultar lotes'], ['Documento em PDF', 'PDF document', 'Documento PDF'],
     ['Use o zoom para ver quadras e lotes', 'Zoom in to see blocks and lots', 'Usa el zoom para ver manzanas y lotes'],

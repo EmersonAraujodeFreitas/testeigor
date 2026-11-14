@@ -972,4 +972,17 @@ button.restrito.loading svg{animation:gira .8s linear infinite}
 .pz-area img{max-width:100%;max-height:100%;object-fit:contain;transform-origin:center;user-select:none;will-change:transform}
 .pz-dica{text-align:center;color:#ffffffa6;font-size:12.5px;padding:10px 16px}
 
+/* ===== V23 · vídeo da capa rodando no fundo ===== */
+.ph2-media{container-type:size}
+.ph2-vid,.ph2-yt{position:absolute;inset:0;opacity:0;transition:opacity 1.2s ease;pointer-events:none}
+.ph2-vid.on,.ph2-yt.on{opacity:1}
+.ph2-vid{width:100%;height:100%;object-fit:cover}
+.ph2-yt{overflow:hidden}
+.ph2-yt iframe{position:absolute;top:50%;left:50%;width:max(100cqw,177.78cqh);height:max(100cqh,56.25cqw);transform:translate(-50%,-50%) scale(1.04);border:0}
+.ph2-som{position:absolute;right:24px;top:122px;z-index:2;display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:999px;border:1px solid #fff3;background:#0008;color:#fff;font-weight:700;font-size:13px;cursor:pointer;backdrop-filter:blur(8px)}
+.ph2-som:hover{background:#000b}
+.ph2-som svg{width:18px;height:18px}
+.ph2-som .o{display:none}.ph2-som.ligado .o{display:inline}.ph2-som.ligado .x{display:none}
+@media(max-width:760px){.ph2-som{right:14px;top:126px;padding:8px 12px}.ph2-som span{display:none}}
+
 @media(max-width:620px){.menu{top:84px}}
