@@ -41,10 +41,32 @@ const Midia = {
     const id = m.id && !/^demo/.test(m.id) ? m.id : (String(m.url).match(/\/file\/d\/([\w-]{20,})/) || [])[1];
     return id ? 'https://drive.google.com/uc?export=download&id=' + encodeURIComponent(id) : '';
   },
+  // prévia curta (até 12 s) servida pelo Google Apps Script — não depende do player do Drive
+  teaser(m){
+    if (m.teaser) return Promise.resolve(m.teaser);
+    if (!m.teaserId || !CONFIG.endpoint) return Promise.resolve('');
+    const C = Midia._tz || (Midia._tz = {});
+    return C[m.teaserId] || (C[m.teaserId] = fetch(CONFIG.endpoint + '?acao=teaser&id=' + encodeURIComponent(m.teaserId))
+      .then(r => r.json()).then(j => {
+        if (!j.ok || !j.b64) return '';
+        const bin = atob(j.b64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+        return URL.createObjectURL(new Blob([u8], {type: j.mime || 'video/mp4'}));
+      }).catch(() => ''));
+  },
+  // coloca no <video> a melhor fonte disponível: prévia curta → arquivo direto do Drive
+  async tocar(v, m, aoFalhar){
+    const tz = await Midia.teaser(m);
+    const fontes = [tz, Midia.arquivoVideo(m)].filter(Boolean);
+    const tentar = () => {
+      const src = fontes.shift(); if (!src){ aoFalhar && aoFalhar(); return; }
+      v.onerror = tentar; v.muted = true; v.src = src; v.play().catch(() => {});
+    };
+    tentar();
+  },
   fundo(m){
     if (!m) return '';
     if (m.tipo === 'youtube' && m.id) return `<div class="ph2-yt" aria-hidden="true"><iframe src="https://www.youtube-nocookie.com/embed/${esc(m.id)}?autoplay=1&mute=1&loop=1&playlist=${esc(m.id)}&controls=0&playsinline=1&rel=0&modestbranding=1&disablekb=1&iv_load_policy=3&fs=0" allow="autoplay; encrypted-media" tabindex="-1" title="Vídeo de fundo"></iframe></div>`;
-    if (m.tipo === 'video'){ const src = Midia.arquivoVideo(m); return src ? `<video class="ph2-vid" src="${esc(src)}" muted autoplay loop playsinline preload="auto" aria-hidden="true"></video>` : ''; }
+    if (m.tipo === 'video') return `<video class="ph2-vid" muted autoplay loop playsinline preload="auto" aria-hidden="true"${m.poster ? ` poster="${esc(m.poster)}"` : ''}></video>`;
     return '';
   },
   temVideo(p){ return (p.midias || []).some(m => m.tipo === 'video' || m.tipo === 'youtube'); },
@@ -309,21 +331,23 @@ function verbo(p){
 }
 // vídeo da capa nos cartões: carrega e toca só quando o cartão aparece na tela
 function videoCartao(p, cls){
-  const m = (p.midias || [])[0]; if (!m || m.tipo !== 'video') return '';
-  const src = Midia.arquivoVideo(m); if (!src) return '';
-  return `<video class="${cls} cvid" data-src="${esc(src)}" muted loop playsinline preload="none" aria-hidden="true"></video>`;
+  const m = (p.midias || [])[0]; if (!m || m.tipo !== 'video' || !(m.teaserId || m.teaser || Midia.arquivoVideo(m))) return '';
+  return `<video class="${cls} cvid" data-post-id="${esc(p.id)}" muted loop playsinline preload="none" aria-hidden="true"></video>`;
 }
 const CVID = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => {
   const v = e.target;
   if (e.isIntersecting){
-    if (!v.src){ v.muted = true; v.addEventListener('playing', () => v.classList.add('on'), {once: true}); v.addEventListener('error', () => v.remove(), {once: true}); v.src = v.dataset.src; }
-    v.play().catch(() => {});
+    if (!v.dataset.ini){
+      v.dataset.ini = 1; v.addEventListener('playing', () => v.classList.add('on'), {once: true});
+      const p = POSTS.find(x => x.id === v.dataset.postId); if (!p) return v.remove();
+      Midia.tocar(v, p.midias[0], () => v.remove());
+    } else v.play().catch(() => {});
   } else if (!v.paused) v.pause();
 }), {rootMargin: '150px'}) : null;
 function ativarVideosCartoes(raiz){
   (raiz || document).querySelectorAll('video.cvid:not([data-obs])').forEach(v => {
     v.dataset.obs = 1;
-    if (CVID) CVID.observe(v); else { v.src = v.dataset.src; v.play().catch(() => {}); }
+    if (CVID) CVID.observe(v); else { const p = POSTS.find(x => x.id === v.dataset.postId); if (p) Midia.tocar(v, p.midias[0], () => v.remove()); }
   });
 }
 new MutationObserver(() => ativarVideosCartoes()).observe(document.documentElement, {childList: true, subtree: true});
@@ -507,9 +531,8 @@ function abrirImovel(id){
     vf.muted = true; vf.defaultMuted = true;
     const ok = () => { vf.classList.add('on'); const sb = $('#ph2Som'); if (sb) sb.hidden = false; };
     vf.addEventListener('playing', ok, {once: true});
-    vf.addEventListener('error', () => vf.remove());
-    const tentar = () => vf.play().catch(() => {});
-    tentar(); document.addEventListener('pointerdown', tentar, {once: true});
+    Midia.tocar(vf, capaVideo, () => vf.remove());
+    document.addEventListener('pointerdown', () => vf.play().catch(() => {}), {once: true});
     const sb = $('#ph2Som');
     if (sb) sb.onclick = () => { vf.muted = !vf.muted; if (!vf.muted) vf.play().catch(() => {}); sb.classList.toggle('ligado', !vf.muted); sb.querySelector('span').textContent = vf.muted ? 'Ativar som' : 'Desativar som'; sb.setAttribute('aria-label', vf.muted ? 'Ativar o som do vídeo' : 'Desativar o som do vídeo'); };
   }

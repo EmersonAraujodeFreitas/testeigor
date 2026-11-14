@@ -112,6 +112,27 @@ function converterVideo(v, mimeSaida, aoProgredir){
     v.play().then(desenhar).catch(err => { vivo = false; rec.stop(); erro(err); });
   });
 }
+// prévia curta e leve (até 12 s, sem som) usada para o vídeo rodar sozinho na capa e nos cartões
+function gravarTeaser(v, aoProgredir){
+  const mime = formatoGravacao(); if (!mime) return Promise.resolve(null);
+  return new Promise(ok => {
+    const dur = Math.min(12, v.duration || 12);
+    const k = Math.min(1, 854 / Math.max(v.videoWidth, v.videoHeight));
+    const c = document.createElement('canvas'); c.width = Math.round(v.videoWidth * k / 2) * 2; c.height = Math.round(v.videoHeight * k / 2) * 2;
+    const g = c.getContext('2d'), st = c.captureStream(30);
+    const rec = new MediaRecorder(st, {mimeType: mime.replace(/,\s*(mp4a[^,]*|opus)/, '').replace(';codecs=avc1.42E01F', ';codecs=avc1.42E01F'), videoBitsPerSecond: 900000});
+    const partes = []; rec.ondataavailable = e => e.data.size && partes.push(e.data);
+    rec.onstop = () => ok(new Blob(partes, {type: mime.split(';')[0]}));
+    let vivo = true;
+    const parar = () => { if (!vivo) return; vivo = false; v.pause(); setTimeout(() => rec.state !== 'inactive' && rec.stop(), 120); };
+    const desenhar = () => { if (!vivo) return; g.drawImage(v, 0, 0, c.width, c.height); aoProgredir(Math.min(99, Math.round(v.currentTime / dur * 100)));
+      if (v.currentTime >= dur) return parar(); v.requestVideoFrameCallback ? v.requestVideoFrameCallback(desenhar) : requestAnimationFrame(desenhar); };
+    v.onended = parar; v.muted = true; v.currentTime = 0;
+    rec.start(1000);
+    v.play().then(desenhar).catch(() => { vivo = false; rec.stop(); });
+    setTimeout(parar, (dur + 6) * 1000);
+  });
+}
 async function prepararVideo(f, aoProgredir){
   let aberto;
   try { aberto = await abrirVideo(f); }
@@ -119,12 +140,14 @@ async function prepararVideo(f, aoProgredir){
   const {v, url} = aberto;
   try {
     const poster = await miniaturaVideo(v).catch(() => '');
+    const teaser = await gravarTeaser(v, n => aoProgredir(n, 'Criando prévia')).catch(() => null);
+    v.onended = null;
     const precisa = !VIDEO_UNIVERSAL.test(f.type) || f.size > MAX_VIDEO_MB * 1048576 || await ehHevc(f);
     const saida = precisa ? formatoGravacao() : '';
-    if (!precisa || !saida) return {blob: f, mime: f.type || 'video/mp4', poster, avisoFormato: precisa};
+    if (!precisa || !saida) return {blob: f, mime: f.type || 'video/mp4', poster, teaser, avisoFormato: precisa};
     aoProgredir(0);
     const blob = await converterVideo(v, saida, aoProgredir);
-    return {blob, mime: blob.type || 'video/webm', poster, convertido: true};
+    return {blob, mime: blob.type || 'video/webm', poster, teaser, convertido: true};
   } finally { v.pause(); v.removeAttribute('src'); v.load(); URL.revokeObjectURL(url); }
 }
 
@@ -471,7 +494,7 @@ async function enviarArquivos(files){
       } else {
         // 1) miniatura + conversão para MP4/WebM universal quando precisar
         tmp.etapa = 'Preparando…'; desenharMidias();
-        const pv = await prepararVideo(f, n => { tmp.etapa = 'Convertendo ' + n + '%'; desenharMidias(); });
+        const pv = await prepararVideo(f, (n, txt) => { tmp.etapa = (txt || 'Convertendo') + ' ' + n + '%'; desenharMidias(); });
         if (pv.poster){ tmp.poster = pv.poster; }
         if (pv.blob.size > MAX_VIDEO_MB * 1048576) throw new Error(`mesmo convertido ficou com mais de ${MAX_VIDEO_MB} MB. Publique no YouTube e cole o link.`);
         if (pv.avisoFormato) toast(`${f.name}: este navegador não conseguiu converter o vídeo. Ele foi enviado no formato original e pode não tocar em todos os aparelhos. Tente pelo Google Chrome ou Edge atualizado.`, 'err');
@@ -482,7 +505,14 @@ async function enviarArquivos(files){
         const ext = /webm/.test(pv.mime) ? '.webm' : /mp4/.test(pv.mime) ? '.mp4' : '';
         const r = await api('enviarMidia', { nome: f.name.replace(/\.[^.]+$/, '') + ext, mime: pv.mime, base64: dataURL.split(',')[1], dataURL: DEMO ? dataURL : undefined });
         Object.assign(tmp, r.midia, {tipo: 'video'});
-        // 3) envia a miniatura (capa do vídeo)
+        // 3) envia a prévia curta (é ela que roda sozinha no site)
+        if (pv.teaser && pv.teaser.size > 1000 && pv.teaser.size < 5.5 * 1048576){
+          tmp.etapa = 'Enviando prévia…'; desenharMidias();
+          const tz = await lerArquivo(pv.teaser);
+          const rt = await api('enviarMidia', { nome: f.name.replace(/\.[^.]+$/, '') + ' - previa' + (/webm/.test(pv.teaser.type) ? '.webm' : '.mp4'), mime: pv.teaser.type || 'video/mp4', base64: tz.split(',')[1], dataURL: DEMO ? tz : undefined }).catch(() => null);
+          if (rt && rt.midia){ tmp.teaserId = rt.midia.id; if (DEMO) tmp.teaser = tz; }
+        }
+        // 4) envia a miniatura (capa do vídeo)
         if (pv.poster){
           const rp = await api('enviarMidia', { nome: f.name.replace(/\.[^.]+$/, '') + ' - miniatura.jpg', mime: 'image/jpeg', base64: pv.poster.split(',')[1], dataURL: DEMO ? pv.poster : undefined }).catch(() => null);
           if (rp && rp.midia){ tmp.poster = rp.midia.url; tmp.posterId = rp.midia.id; }
@@ -568,7 +598,7 @@ async function salvar(publicar){
   if (E.midias.some(m => m.enviando) || E.plantas.some(m => m.enviando)) return $('#eErr').textContent = 'Aguarde o envio das mídias e da planta terminar.';
   if (publicar && !E.midias.length && !(await dialogo('Publicar sem foto?', '<p>A publicação vai aparecer sem imagem de capa. Deseja continuar?</p>', 'Publicar mesmo assim'))) return;
   if ((E.lat === '' || E.lat == null) && (E.mapa || E.cidade)){ if (await localizar(true)) lerForm(); }
-  const post = Object.assign({}, E, { status: publicar ? 'publicado' : 'rascunho', distancias: E.distancias.filter(d => d.local && d.km), ficha: E.ficha.filter(f => f.rotulo && f.valor), midias: E.midias.map(({ tipo, id, url, poster, posterId }) => Object.assign({ tipo, id, url }, poster && !/^data:/.test(poster) || DEMO && poster ? { poster, posterId } : {})), plantas: E.plantas.map(({ tipo, id, url, nome }) => ({ tipo, id, url, nome: (nome || '').trim() })) });
+  const post = Object.assign({}, E, { status: publicar ? 'publicado' : 'rascunho', distancias: E.distancias.filter(d => d.local && d.km), ficha: E.ficha.filter(f => f.rotulo && f.valor), midias: E.midias.map(({ tipo, id, url, poster, posterId, teaserId, teaser }) => Object.assign({ tipo, id, url }, poster && !/^data:/.test(poster) || DEMO && poster ? { poster, posterId } : {}, teaserId ? { teaserId } : {}, DEMO && teaser ? { teaser } : {})), plantas: E.plantas.map(({ tipo, id, url, nome }) => ({ tipo, id, url, nome: (nome || '').trim() })) });
   const bs = [$('#ePublicar'), $('#eRascunho')]; bs.forEach(b => b.disabled = true);
   try { await api('salvarPost', { post }); toast(publicar ? 'Publicado! Já aparece no site.' : 'Salvo como rascunho (oculto no site).'); mostrar('posts'); }
   catch(err){ $('#eErr').textContent = err.message; }

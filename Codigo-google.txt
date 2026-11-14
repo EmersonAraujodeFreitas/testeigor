@@ -36,6 +36,7 @@ const STATUS_VISITA = ['Pendente', 'Confirmada', 'Realizada', 'Cancelada'];
 function doGet(e) {
   const acao = (e && e.parameter && e.parameter.acao) || 'posts';
   if (acao === 'posts') return json({ ok: true, posts: postsPublicos(), config: lerConfig() });
+  if (acao === 'teaser') { try { return json(Object.assign({ ok: true }, teaser(e.parameter.id))); } catch (err) { return json({ ok: false, erro: String(err.message || err) }); } }
   return json({ ok: true, servico: 'Grupo Bahia Imóveis' });
 }
 
@@ -109,6 +110,21 @@ function visto(d) {
   const lock = LockService.getScriptLock(); if (!lock.tryLock(5000)) return;
   try { const p = linhas('Posts').find(x => x.id === id && x.status === 'publicado'); if (p) atualizar('Posts', id, { views: (Number(p.views) || 0) + 1 }); }
   finally { lock.releaseLock(); }
+}
+
+/** Entrega a prévia curta de um vídeo (só de imóveis publicados) para rodar sozinha no site. */
+function teaser(idBruto) {
+  const id = limpar(idBruto, 80); if (!/^[\w-]{10,80}$/.test(id)) throw new Error('Prévia inválida.');
+  const cache = CacheService.getScriptCache(), k = 'tz_ok_' + id;
+  if (!cache.get(k)) {
+    const ok = linhas('Posts').some(p => p.status === 'publicado' && String(p.midias || '').indexOf('"teaserId":"' + id + '"') >= 0);
+    if (!ok) throw new Error('Prévia não encontrada.');
+    cache.put(k, '1', 3600);
+  }
+  limitar('tz_total', 20000, 3600, 'Muitos acessos no momento.');
+  const blob = DriveApp.getFileById(id).getBlob();
+  if (blob.getBytes().length > 6 * 1024 * 1024) throw new Error('Prévia grande demais.');
+  return { mime: blob.getContentType() || 'video/mp4', b64: Utilities.base64Encode(blob.getBytes()) };
 }
 
 /* ================= ACESSO ================= */
@@ -218,6 +234,7 @@ function salvarPost(d, eu) {
   let midias = Array.isArray(p.midias) ? p.midias.slice(0, 30) : [];
   midias = midias.map(m => { const o = { tipo: limpar(m.tipo, 10), id: limpar(m.id, 80), url: limpar(m.url, 500) };
     if (/^https:\/\//.test(String(m.poster || ''))) { o.poster = limpar(m.poster, 500); o.posterId = limpar(m.posterId, 80); }
+    if (/^[\w-]{10,80}$/.test(String(m.teaserId || ''))) o.teaserId = String(m.teaserId);
     return o; }).filter(m => m.url || m.id);
   const plantas = (Array.isArray(p.plantas) ? p.plantas.slice(0, 8) : [])
     .map(m => ({ tipo: m.tipo === 'pdf' ? 'pdf' : 'imagem', id: limpar(m.id, 80), url: limpar(m.url, 500), nome: limpar(m.nome, 60) }))
@@ -253,7 +270,7 @@ function salvarPost(d, eu) {
 function excluirPost(d, eu) {
   const p = linhas('Posts').find(x => x.id === d.id); if (!p) throw new Error('Postagem não encontrada.');
   if (d.apagarArquivos) {
-    JSON.parse(p.midias || '[]').concat(JSON.parse(p.plantas || '[]')).forEach(m => { [m.tipo !== 'youtube' && m.id, m.posterId].forEach(id => { if (id) try { DriveApp.getFileById(id).setTrashed(true); } catch (_) {} }); });
+    JSON.parse(p.midias || '[]').concat(JSON.parse(p.plantas || '[]')).forEach(m => { [m.tipo !== 'youtube' && m.id, m.posterId, m.teaserId].forEach(id => { if (id) try { DriveApp.getFileById(id).setTrashed(true); } catch (_) {} }); });
   }
   apagarLinha('Posts', p.id); log(eu.usuario, 'excluiu postagem', p.titulo);
 }
