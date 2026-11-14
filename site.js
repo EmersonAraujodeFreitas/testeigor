@@ -51,12 +51,21 @@ const Midia = {
     const u = esc(m.url);
     if (m.tipo === 'imagem') return `<img src="${u}" alt="" loading="lazy">`;
     if (m.tipo === 'youtube') return `<iframe src="https://www.youtube.com/embed/${esc(m.id)}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
-    if (m.tipo === 'video') return /^(data:|blob:)/.test(m.url) || /\.(mp4|webm|mov)(\?|$)/i.test(m.url)
-      ? `<video src="${u}" controls playsinline preload="metadata"></video>`
-      : `<iframe src="${u}" allow="autoplay" allowfullscreen loading="lazy"></iframe>`;
+    if (m.tipo === 'video'){
+      // toca o arquivo direto (não depende do processamento do Google Drive); se falhar, usa o player do Drive
+      const arq = Midia.arquivoVideo(m);
+      if (arq) return `<video src="${esc(arq)}" controls autoplay playsinline preload="auto"${arq !== m.url ? ` data-alt="${u}"` : ''}></video>`;
+      return `<iframe src="${u}" allow="autoplay" allowfullscreen loading="lazy"></iframe>`;
+    }
     return `<a class="btn btn-ghost" href="${u}" target="_blank" rel="noopener">Abrir conteúdo</a>`;
   }
 };
+
+// vídeo que não abriu direto: troca pelo player do Drive
+document.addEventListener('error', e => {
+  const v = e.target; if (!(v instanceof HTMLVideoElement) || !v.dataset.alt) return;
+  const f = document.createElement('iframe'); f.src = v.dataset.alt; f.allow = 'autoplay'; f.allowFullscreen = true; v.replaceWith(f);
+}, true);
 
 /* ===== UTILIDADES ===== */
 const $ = s => document.querySelector(s);
