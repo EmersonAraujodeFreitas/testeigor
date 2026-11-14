@@ -991,4 +991,8 @@ button.restrito.loading svg{animation:gira .8s linear infinite}
 .scard .ph .svid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .9s ease;pointer-events:none}
 .cvid.on{opacity:1}
 
+/* V27 · todas as plantas visíveis */
+.pl-lista{display:flex;flex-direction:column;gap:22px}
+.pl-qtd{font-size:13px;font-weight:700;color:var(--muted);padding:6px 12px;border:1px solid var(--line2);border-radius:999px;white-space:nowrap}
+
 @media(max-width:620px){.menu{top:84px}}

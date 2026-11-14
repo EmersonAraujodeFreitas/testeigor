@@ -490,8 +490,8 @@ function abrirImovel(id){
         ${plantas.length ? `
         <section class="d2-sec pl-sec" id="sec-planta">
           <div class="mz-head"><div><span class="eyebrow">Implantação</span><h2>${/lote/i.test(p.categoria || '') ? 'Planta do loteamento' : 'Planta do imóvel'}</h2></div>
-            ${plantas.length > 1 ? `<div class="lc-tabs pl-tabs">${plantas.map((x, k) => `<button type="button" class="${k ? '' : 'on'}" data-pl="${k}">${esc(x.nome || 'Planta ' + (k + 1))}</button>`).join('')}</div>` : ''}</div>
-          <div class="pl-view" id="plView"></div>
+            ${plantas.length > 1 ? `<span class="pl-qtd">${plantas.length} plantas</span>` : ''}</div>
+          <div class="pl-lista" id="plLista"></div>
         </section>` : ''}
       </div>
       <aside class="d2-side" id="sec-contato">
@@ -538,21 +538,22 @@ function abrirImovel(id){
   }
   if (yf){ const fr = yf.querySelector('iframe'); fr.addEventListener('load', () => setTimeout(() => yf.classList.add('on'), 1200), {once: true}); }
   if (plantas.length){
-    const verPlanta = k => {
-      const x = plantas[k], nome = x.nome || 'Planta ' + (k + 1);
+    // todas as plantas aparecem, uma abaixo da outra, com nomes padronizados (Planta 1, Planta 2…)
+    const nomeP = k => plantas.length > 1 ? `Planta ${k + 1} de ${plantas.length}` : 'Planta do empreendimento';
+    $('#plLista').innerHTML = plantas.map((x, k) => {
+      const nome = nomeP(k);
       const img = x.tipo === 'pdf' ? (x.id && !/^demo/.test(x.id) ? 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(x.id) + '&sz=w1600' : '') : x.url;
       const abrirPdf = x.tipo === 'pdf' ? String(x.url).replace(/\/preview$/, '/view') : '';
-      $('#plView').innerHTML = `
-        ${img ? `<button type="button" class="pl-img" data-plzoom aria-label="Ampliar a planta"><img src="${esc(img)}" alt="${esc(nome)}" loading="lazy">
+      return `<div class="pl-view" data-k="${k}">
+        ${img ? `<button type="button" class="pl-img" data-plzoom aria-label="Ampliar ${esc(nome)}"><img src="${esc(img)}" alt="${esc(nome)}" loading="lazy">
           <span class="pl-hint"><svg><use href="#i-search"/></svg>${x.tipo === 'pdf' ? 'Toque para abrir o PDF' : 'Toque para ampliar'}</span></button>`
           : `<div class="pl-noimg"><span>PDF</span><b>${esc(nome)}</b></div>`}
         <div class="pl-bar"><span><b>${esc(nome)}</b><small>${x.tipo === 'pdf' ? 'Documento em PDF' : 'Use o zoom para ver quadras e lotes'}</small></span>
           ${x.tipo === 'pdf' ? `<a class="btn btn-ghost sm" href="${esc(abrirPdf)}" target="_blank" rel="noopener">Abrir PDF</a>` : '<button type="button" class="btn btn-ghost sm" data-plzoom>Ampliar planta</button>'}
-          <button type="button" class="btn btn-gold sm" data-chat="${interesse}">Consultar lotes</button></div>`;
-      $('#plView').querySelectorAll('[data-plzoom]').forEach(b => b.onclick = () => x.tipo === 'pdf' ? window.open(abrirPdf, '_blank', 'noopener') : zoomPlanta(x.url, nome));
-    };
-    body.querySelectorAll('[data-pl]').forEach(b => b.onclick = () => { body.querySelectorAll('[data-pl]').forEach(o => o.classList.toggle('on', o === b)); verPlanta(+b.dataset.pl); });
-    verPlanta(0);
+          <button type="button" class="btn btn-gold sm" data-chat="${interesse}">Consultar lotes</button></div></div>`;
+    }).join('');
+    $$('#plLista .pl-view').forEach(el => { const k = +el.dataset.k, x = plantas[k], abrirPdf = String(x.url).replace(/\/preview$/, '/view');
+      el.querySelectorAll('[data-plzoom]').forEach(b => b.onclick = () => x.tipo === 'pdf' ? window.open(abrirPdf, '_blank', 'noopener') : zoomPlanta(x.url, nomeP(k))); });
   }
   body.querySelectorAll('.mz').forEach(b => b.onclick = () => lightbox(ms, +b.dataset.i));
   body.querySelectorAll('[data-mz]').forEach(b => b.onclick = () => {
@@ -1315,7 +1316,7 @@ const I18N = (() => {
     ['Praias', 'Beaches', 'Playas'], ['Terrenos com lago', 'Land with lakes', 'Terrenos con lago'], ['Fazendas', 'Farms', 'Haciendas'], ['Litoral', 'Coastline', 'Litoral'], ['Rios e natureza', 'Rivers and nature', 'Ríos y naturaleza'],
     ['Ver as fotos', 'See the photos', 'Ver las fotos'], ['Assistir ao vídeo', 'Watch the video', 'Ver el video'], ['Valor', 'Price', 'Valor'],
     ['Sobre o imóvel', 'About the property', 'Sobre el inmueble'], ['Conheça', 'Discover', 'Conozca'], ['cada detalhe', 'every detail', 'cada detalle'], ['os detalhes', 'the details', 'los detalles'],
-    ['Galeria', 'Gallery', 'Galería'], ['Ativar som', 'Sound on', 'Activar sonido'], ['Desativar som', 'Sound off', 'Desactivar sonido'], ['Implantação', 'Site plan', 'Implantación'], ['Planta do loteamento', 'Subdivision plan', 'Plano del loteo'], ['Planta do imóvel', 'Property plan', 'Plano de la propiedad'],
+    ['Galeria', 'Gallery', 'Galería'], ['Planta do empreendimento', 'Development plan', 'Plano del emprendimiento'], ['Ativar som', 'Sound on', 'Activar sonido'], ['Desativar som', 'Sound off', 'Desactivar sonido'], ['Implantação', 'Site plan', 'Implantación'], ['Planta do loteamento', 'Subdivision plan', 'Plano del loteo'], ['Planta do imóvel', 'Property plan', 'Plano de la propiedad'],
     ['Toque para ampliar', 'Tap to zoom', 'Toca para ampliar'], ['Toque para abrir o PDF', 'Tap to open the PDF', 'Toca para abrir el PDF'], ['Abrir PDF', 'Open PDF', 'Abrir PDF'],
     ['Ampliar planta', 'Zoom plan', 'Ampliar plano'], ['Consultar lotes', 'Ask about lots', 'Consultar lotes'], ['Documento em PDF', 'PDF document', 'Documento PDF'],
     ['Use o zoom para ver quadras e lotes', 'Zoom in to see blocks and lots', 'Usa el zoom para ver manzanas y lotes'],
@@ -1333,6 +1334,8 @@ const I18N = (() => {
   const CAT = ['fazenda', 'terreno', 'loteamento', 'sítio', 'chácara', 'casa', 'imóvel', 'área', 'ilha'];
   // frases com partes variáveis
   const R = [
+    [/^Planta (\d+) de (\d+)$/, (m, l) => l === 'en' ? `Plan ${m[1]} of ${m[2]}` : `Plano ${m[1]} de ${m[2]}`],
+    [/^(\d+) plantas$/, (m, l) => l === 'en' ? `${m[1]} plans` : `${m[1]} planos`],
     [/^(\d+) opç(ão|ões) encontradas?$/, (m, l) => l === 'en' ? `${m[1]} ${m[1] === '1' ? 'option' : 'options'} found` : `${m[1]} ${m[1] === '1' ? 'opción encontrada' : 'opciones encontradas'}`],
     [/^Nenhuma opção de (.+) disponível agora$/, (m, l) => l === 'en' ? `No ${tr(cap(m[1]), l).toLowerCase()} available right now` : `Ninguna opción de ${tr(cap(m[1]), l).toLowerCase()} disponible ahora`],
     [/^Conhecer (a|o) (.+)$/, (m, l) => l === 'en' ? `See the ${tr(cap(m[2]), l).toLowerCase()}` : `Conocer ${/^(Hacienda|Finca|Quinta|Casa|Isla|Área)$/.test(tr(cap(m[2]), l)) ? 'la' : 'el'} ${tr(cap(m[2]), l).toLowerCase()}`],

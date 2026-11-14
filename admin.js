@@ -530,8 +530,7 @@ function desenharPlantas(){
   const box = $('#ePlantas'); if (!box) return;
   box.innerHTML = E.plantas.length ? E.plantas.map((m, i) => `<div class="pl-i${m.enviando ? ' up' : ''}" data-i="${i}">
       <div class="pl-t">${m.tipo === 'pdf' ? '<span class="pl-pdf">PDF</span>' : (m.url ? `<img src="${esc(m.url)}" alt="">` : '')}${m.enviando ? '<span class="spin"></span>' : ''}</div>
-      <div class="pl-c"><small>${i === 0 ? 'Planta principal' : 'Planta ' + (i + 1)} · ${m.tipo === 'pdf' ? 'PDF' : 'Imagem'}</small>
-        <input class="pl-n" maxlength="60" placeholder="Legenda (ex.: Planta geral, Quadra A)" value="${esc(m.nome || '')}" ${m.enviando ? 'disabled' : ''}></div>
+      <div class="pl-c"><b class="pl-nome">Planta ${i + 1}</b><small>${m.tipo === 'pdf' ? 'Documento PDF' : 'Imagem'}${i === 0 ? ' · aparece primeiro' : ''}${m.enviando ? ' · enviando…' : ''}</small></div>
       ${m.enviando ? '' : `<div class="pl-a"><button type="button" data-p="esq" title="Mover para cima" aria-label="Mover para cima">▲</button><button type="button" data-p="dir" title="Mover para baixo" aria-label="Mover para baixo">▼</button><button type="button" data-p="del" class="danger" title="Remover" aria-label="Remover">×</button></div>`}
     </div>`).join('') : '<p class="muted small pl-vazio">Nenhuma planta enviada. Opcional — ideal para loteamentos e terrenos.</p>';
   box.querySelectorAll('.pl-i').forEach(el => {
