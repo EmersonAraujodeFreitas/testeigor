@@ -1086,8 +1086,17 @@ async function montarMapa(){
   try { await carregarLeaflet(); } catch(_){ $('#mapaInfo').textContent = 'Não foi possível carregar o mapa agora. Tente novamente em instantes.'; return; }
   if (!MAPA){
     MAPA = L.map(box, {scrollWheelZoom: false, zoomControl: true, attributionControl: true}).setView([-14.2, -51.9], 4);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {maxZoom: 19, subdomains: 'abcd',
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> &copy; <a href="https://carto.com/" target="_blank" rel="noopener">CARTO</a>'}).addTo(MAPA);
+    // mapa base sem chave de API: OpenStreetMap; se falhar, troca para Esri
+    const camadaOSM = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'});
+    let falhas = 0;
+    camadaOSM.on('tileerror', () => {
+      if (++falhas !== 6) return;
+      MAPA.removeLayer(camadaOSM);
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {maxZoom: 19,
+        attribution: 'Tiles &copy; <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a>'}).addTo(MAPA);
+    });
+    camadaOSM.addTo(MAPA);
     box.addEventListener('click', e => { const b = e.target.closest('[data-abrir]'); if (b){ e.preventDefault(); abrirImovel(b.dataset.abrir); } });
     MAPA.on('focus', () => MAPA.scrollWheelZoom.enable()); MAPA.on('blur', () => MAPA.scrollWheelZoom.disable());
   }
