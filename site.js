@@ -315,8 +315,11 @@ async function carregarPosts(){
 
 /* ===== CARTÃO DO IMÓVEL (estilo vitrine) ===== */
 const catDe = p => p.categoria || (p.tipo === 'divulgacao' ? 'Divulgação' : 'Imóvel');
-const SIT = {reservado: 'Reservado', vendido: 'Vendido'};
-const selos = p => (p.tipo === 'lancamento' ? '<span class="badge">Lançamento</span>' : '') + (p.etiqueta ? `<span class="badge">${esc(p.etiqueta)}</span>` : '') + (!p.etiqueta && p.destaque && p.tipo !== 'lancamento' ? '<span class="badge gold">Destaque</span>' : '');
+const SIT_BASE = {reservado: 'Reservado', vendido: 'Vendido'};
+const SIT = SIT_BASE;
+const sitDe = p => p.situacao === 'vendido' && p.tipo === 'aluguel' ? 'Alugado' : SIT_BASE[p.situacao];
+const ALUGAR = 'Para alugar';
+const selos = p => (p.tipo === 'lancamento' ? '<span class="badge">Lançamento</span>' : p.tipo === 'aluguel' ? '<span class="badge alug">Para alugar</span>' : '') + (p.etiqueta ? `<span class="badge">${esc(p.etiqueta)}</span>` : '') + (!p.etiqueta && p.destaque && p.tipo !== 'lancamento' ? '<span class="badge gold">Destaque</span>' : '');
 function tituloFmt(t){
   const w = String(t || '').trim().split(/\s+/);
   if (w.length < 2) return esc(t) + '<span class="dot">.</span>';
@@ -356,7 +359,7 @@ function cartao(p, mini){
   const capa = Midia.capa(p);
   if (mini) return `
     <article class="scard" data-post="${esc(p.id)}" tabindex="0">
-      <div class="ph">${capa ? `<img src="${esc(capa)}" alt="" loading="lazy">` : '<div class="noimg"><svg><use href="#i-casa"/></svg></div>'}${videoCartao(p, 'svid')}${SIT[p.situacao] ? `<span class="sit ${p.situacao}">${SIT[p.situacao]}</span>` : ''}</div>
+      <div class="ph">${capa ? `<img src="${esc(capa)}" alt="" loading="lazy">` : '<div class="noimg"><svg><use href="#i-casa"/></svg></div>'}${videoCartao(p, 'svid')}${sitDe(p) ? `<span class="sit ${p.situacao}">${sitDe(p)}</span>` : ''}</div>
       <div class="bd"><span class="lo">${esc(p.cidade || catDe(p))}</span><h3>${esc(p.titulo)}</h3>
         ${p.resumo || p.preco ? `<p>${esc([p.preco, p.resumo].filter(Boolean).join(' · '))}</p>` : ''}
         <span class="lk">Ver imóvel ↗</span></div>
@@ -366,7 +369,7 @@ function cartao(p, mini){
       ${capa ? `<img src="${esc(capa)}" alt="${esc(p.titulo)}" loading="lazy">` : '<div class="noimg"><svg><use href="#i-casa"/></svg></div>'}
       ${videoCartao(p, 'pvid')}
       <div class="badges">${selos(p)}</div>
-      ${SIT[p.situacao] ? `<span class="sit ${p.situacao}">${SIT[p.situacao]}</span>` : (Midia.temVideo(p) ? '<span class="play" title="Tem vídeo">▶</span>' : '')}
+      ${sitDe(p) ? `<span class="sit ${p.situacao}">${sitDe(p)}</span>` : (Midia.temVideo(p) ? '<span class="play" title="Tem vídeo">▶</span>' : '')}
       <button type="button" class="fav${ehFav(p.id) ? ' on' : ''}" data-fav="${esc(p.id)}" aria-label="Salvar nos favoritos" title="Salvar nos favoritos"><svg><use href="#i-heart"/></svg></button>
       <div class="pc">
         <span class="lo">${esc(p.cidade || catDe(p))}</span>
@@ -418,7 +421,7 @@ function abrirImovel(id){
   const fotos = ms.map((m, i) => ({m, i})).filter(x => x.m.tipo === 'imagem');
   const videos = ms.map((m, i) => ({m, i})).filter(x => x.m.tipo !== 'imagem');
   const capa = Midia.capa(p);
-  const sit = SIT[p.situacao];
+  const sit = sitDe(p);
   const destaques = (p.resumo || '').split('·').map(s => s.trim()).filter(Boolean);
   const ficha = (p.ficha || []).filter(f => f.rotulo && f.valor);
   const rapidos = ficha.slice(0, 3);
@@ -444,7 +447,7 @@ function abrirImovel(id){
       <div class="wrap ph2-in">
         <button class="voltar2" data-tab="${abaAnterior}">← Voltar</button>
         <div class="ph2-txt">
-          <div class="ph2-chips">${p.tipo === 'lancamento' ? '<span>Lançamento</span>' : ''}<span>${esc(catDe(p))}</span><span class="${p.situacao || 'disponivel'}">${sit || 'Disponível'}</span></div>
+          <div class="ph2-chips">${p.tipo === 'lancamento' ? '<span>Lançamento</span>' : p.tipo === 'aluguel' ? '<span class="alug">Para alugar</span>' : ''}<span>${esc(catDe(p))}</span><span class="${p.situacao || 'disponivel'}">${sit || 'Disponível'}</span></div>
           <span class="lo">${esc(p.cidade || '')}</span>
           <h1>${tituloFmt(p.titulo)}</h1>
           ${p.resumo ? `<p>${esc(p.resumo)}</p>` : ''}
@@ -458,7 +461,7 @@ function abrirImovel(id){
     </section>
 
     <div class="sbar"><div class="wrap sbar-in">
-      <div class="sbar-p"><small>Valor</small><b>${esc(p.preco || 'Sob consulta')}</b></div>
+      <div class="sbar-p"><small>${p.tipo === 'aluguel' ? 'Valor do aluguel' : 'Valor'}</small><b>${esc(p.preco || 'Sob consulta')}</b></div>
       ${rapidos.length ? `<div class="sbar-f">${rapidos.map(f => `<div><svg><use href="#i-${iconeFicha(f.rotulo)}"/></svg><span><small>${esc(f.rotulo)}</small>${esc(f.valor)}</span></div>`).join('')}</div>` : '<div class="sbar-f"></div>'}
       <div class="sbar-a">
         <button class="ic2 fav2${ehFav(p.id) ? ' on' : ''}" data-fav="${esc(p.id)}" title="Salvar nos favoritos" aria-label="Salvar nos favoritos"><svg><use href="#i-heart"/></svg><span>Favoritar</span></button>
@@ -521,7 +524,7 @@ function abrirImovel(id){
       <div class="sim2-t">${sim.lista.map(x => cartao(x, true)).join('')}</div>
     </div></section>` : ''}
 
-    <div class="mbar2"><div><small>${esc(p.preco ? 'Valor' : catDe(p))}</small><b>${esc(p.preco || 'Sob consulta')}</b></div><button class="ic2" data-share aria-label="Compartilhar"><svg><use href="#i-share"/></svg></button><button class="btn btn-gold" data-chat="${interesse}">Tenho interesse</button></div>`;
+    <div class="mbar2"><div><small>${esc(p.preco ? (p.tipo === 'aluguel' ? 'Valor do aluguel' : 'Valor') : catDe(p))}</small><b>${esc(p.preco || 'Sob consulta')}</b></div><button class="ic2" data-share aria-label="Compartilhar"><svg><use href="#i-share"/></svg></button><button class="btn btn-gold" data-chat="${interesse}">Tenho interesse</button></div>`;
 
   const body = $('#detalheBody');
   body.querySelectorAll('[data-galeria]').forEach(b => b.onclick = () => lightbox(ms, +b.dataset.galeria));
@@ -795,7 +798,7 @@ function desenharImoveis(){
   const cat = p => p.categoria || (p.tipo === 'divulgacao' ? 'Divulgação' : 'Imóvel');
   const temFiltro = FILTRO.categoria || FILTRO.cidade || FILTRO.max;
   const lista = IM.filter(p => (!FILTRO.fav || ehFav(p.id)) &&
-    (!FILTRO.categoria || semAcento(cat(p)) === semAcento(FILTRO.categoria)) &&
+    (!FILTRO.categoria || (FILTRO.categoria === ALUGAR ? p.tipo === 'aluguel' : semAcento(cat(p)) === semAcento(FILTRO.categoria))) &&
     (!FILTRO.cidade || semAcento([p.cidade, p.titulo, p.descricao].join(' ')).includes(semAcento(FILTRO.cidade))) &&
     (!FILTRO.max || !precoNumero(p.preco) || precoNumero(p.preco) <= FILTRO.max));
   const resumo = $('#filtroResumo');
@@ -807,7 +810,7 @@ function desenharImoveis(){
   }
   const c = $('#countText');
   if (c) c.textContent = IM.length ? (lista.length + (lista.length === 1 ? ' opção encontrada' : ' opções encontradas')) : 'Novos anúncios em breve. Enquanto isso, consulte as oportunidades com a nossa equipe.';
-  const tipos = [...new Set(IM.map(cat))];
+  const tipos = [...new Set(IM.map(cat))].concat(IM.some(p => p.tipo === 'aluguel') ? [ALUGAR] : []);
   chips.style.display = tipos.length > 1 ? '' : 'none';
   chips.innerHTML = ['', ...tipos].map(t => `<button class="chip ${semAcento(t)===semAcento(FILTRO.categoria)?'on':''}" data-t="${esc(t)}">${t ? esc(t) : 'Todos'}</button>`).join('');
   const nf = favs().filter(id => IM.some(p => p.id === id)).length;
@@ -842,7 +845,7 @@ function desenharImoveis(){
 }
 
 function montarBusca(){
-  const tipos = '<option value="">Todos os tipos</option>' + CATEGORIAS.map(c => `<option>${c.nome}</option>`).join('') + '<option>Divulgação</option>';
+  const tipos = '<option value="">Todos os tipos</option>' + CATEGORIAS.map(c => `<option>${c.nome}</option>`).join('') + '<option>Para alugar</option><option>Divulgação</option>';
   const valores = VALORES.map(v => `<option value="${v[0]}">${v[1]}</option>`).join('');
   [['finder','f'], ['ifiltro','i']].forEach(([form, p]) => {
     const f = $('#' + form); if (!f) return;
@@ -1319,7 +1322,7 @@ const I18N = (() => {
     ['Praias', 'Beaches', 'Playas'], ['Terrenos com lago', 'Land with lakes', 'Terrenos con lago'], ['Fazendas', 'Farms', 'Haciendas'], ['Litoral', 'Coastline', 'Litoral'], ['Rios e natureza', 'Rivers and nature', 'Ríos y naturaleza'],
     ['Ver as fotos', 'See the photos', 'Ver las fotos'], ['Assistir ao vídeo', 'Watch the video', 'Ver el video'], ['Valor', 'Price', 'Valor'],
     ['Sobre o imóvel', 'About the property', 'Sobre el inmueble'], ['Conheça', 'Discover', 'Conozca'], ['cada detalhe', 'every detail', 'cada detalle'], ['os detalhes', 'the details', 'los detalles'],
-    ['Galeria', 'Gallery', 'Galería'], ['Planta do empreendimento', 'Development plan', 'Plano del emprendimiento'], ['Ativar som', 'Sound on', 'Activar sonido'], ['Desativar som', 'Sound off', 'Desactivar sonido'], ['Implantação', 'Site plan', 'Implantación'], ['Planta do loteamento', 'Subdivision plan', 'Plano del loteo'], ['Planta do imóvel', 'Property plan', 'Plano de la propiedad'],
+    ['Galeria', 'Gallery', 'Galería'], ['Para alugar', 'For rent', 'En alquiler'], ['Alugado', 'Rented', 'Alquilado'], ['Valor do aluguel', 'Rent', 'Alquiler'], ['Planta do empreendimento', 'Development plan', 'Plano del emprendimiento'], ['Ativar som', 'Sound on', 'Activar sonido'], ['Desativar som', 'Sound off', 'Desactivar sonido'], ['Implantação', 'Site plan', 'Implantación'], ['Planta do loteamento', 'Subdivision plan', 'Plano del loteo'], ['Planta do imóvel', 'Property plan', 'Plano de la propiedad'],
     ['Toque para ampliar', 'Tap to zoom', 'Toca para ampliar'], ['Toque para abrir o PDF', 'Tap to open the PDF', 'Toca para abrir el PDF'], ['Abrir PDF', 'Open PDF', 'Abrir PDF'],
     ['Ampliar planta', 'Zoom plan', 'Ampliar plano'], ['Consultar lotes', 'Ask about lots', 'Consultar lotes'], ['Documento em PDF', 'PDF document', 'Documento PDF'],
     ['Use o zoom para ver quadras e lotes', 'Zoom in to see blocks and lots', 'Usa el zoom para ver manzanas y lotes'],

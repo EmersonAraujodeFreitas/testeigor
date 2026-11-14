@@ -995,4 +995,8 @@ button.restrito.loading svg{animation:gira .8s linear infinite}
 .pl-lista{display:flex;flex-direction:column;gap:22px}
 .pl-qtd{font-size:13px;font-weight:700;color:var(--muted);padding:6px 12px;border:1px solid var(--line2);border-radius:999px;white-space:nowrap}
 
+/* V29 · aluguel */
+.badge.alug{background:#2f6fd6;color:#fff;border-color:#2f6fd6}
+.ph2-chips .alug{background:#2f6fd6cc;color:#fff;border-color:#2f6fd6}
+
 @media(max-width:620px){.menu{top:84px}}

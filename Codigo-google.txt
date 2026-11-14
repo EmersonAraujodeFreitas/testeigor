@@ -240,7 +240,7 @@ function salvarPost(d, eu) {
     .map(m => ({ tipo: m.tipo === 'pdf' ? 'pdf' : 'imagem', id: limpar(m.id, 80), url: limpar(m.url, 500), nome: limpar(m.nome, 60) }))
     .filter(m => /^https:\/\//.test(m.url));
   const dados = {
-    tipo: ['divulgacao', 'lancamento'].indexOf(p.tipo) >= 0 ? p.tipo : 'imovel',
+    tipo: ['divulgacao', 'lancamento', 'aluguel'].indexOf(p.tipo) >= 0 ? p.tipo : 'imovel',
     situacao: ['reservado', 'vendido'].indexOf(p.situacao) >= 0 ? p.situacao : 'disponivel',
     formato: p.formato === 'largo' ? 'largo' : 'padrao',
     ficha: JSON.stringify((Array.isArray(p.ficha) ? p.ficha : []).slice(0, 16)
