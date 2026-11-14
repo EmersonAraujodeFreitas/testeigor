@@ -808,6 +808,7 @@ function desenharImoveis(){
     resumo.style.display = temFiltro ? '' : 'none';
     const l = $('#limpar'); if (l) l.onclick = () => { Object.assign(FILTRO, {categoria:'', cidade:'', max:0}); desenharImoveis(); };
   }
+  const tq = $('#tituloOq'); if (tq) tq.textContent = FILTRO.categoria === ALUGAR ? 'para alugar' : 'à venda';
   const c = $('#countText');
   if (c) c.textContent = IM.length ? (lista.length + (lista.length === 1 ? ' opção encontrada' : ' opções encontradas')) : 'Novos anúncios em breve. Enquanto isso, consulte as oportunidades com a nossa equipe.';
   const tipos = [...new Set(IM.map(cat))].concat(IM.some(p => p.tipo === 'aluguel') ? [ALUGAR] : []);
@@ -1212,7 +1213,7 @@ const I18N = (() => {
     ['Imóveis em', 'Featured', 'Inmuebles'], ['destaque', 'properties', 'destacados'], ['Ver todos os imóveis', 'See all properties', 'Ver todos los inmuebles'],
     ['Encontre por categoria', 'Browse by category', 'Busque por categoría'], ['O que você', 'What are you', '¿Qué está'], ['procura?', 'looking for?', 'buscando?'],
     ['Clique em uma categoria para ver o que está disponível.', 'Click a category to see what is available.', 'Haga clic en una categoría para ver lo disponible.'],
-    ['Portfólio imobiliário', 'Real estate portfolio', 'Portafolio inmobiliario'], ['à venda', 'for sale', 'en venta'],
+    ['Portfólio imobiliário', 'Real estate portfolio', 'Portafolio inmobiliario'], ['à venda', 'for sale', 'en venta'], ['para alugar', 'for rent', 'en alquiler'],
     ['Carregando as oportunidades…', 'Loading opportunities…', 'Cargando oportunidades…'], ['Tipo', 'Type', 'Tipo'], ['Até', 'Up to', 'Hasta'],
     ['O imóvel ideal', 'The ideal property', 'El inmueble ideal'], ['para você', 'for you', 'para usted'],
     ['Clique em uma categoria e veja o que está disponível para venda.', 'Click a category and see what is available for sale.', 'Haga clic en una categoría y vea lo disponible para la venta.'],
