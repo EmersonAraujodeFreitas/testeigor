@@ -490,7 +490,7 @@ function abrirImovel(id){
         ${plantas.length ? `
         <section class="d2-sec pl-sec" id="sec-planta">
           <div class="mz-head"><div><span class="eyebrow">Implantação</span><h2>${/lote/i.test(p.categoria || '') ? 'Planta do loteamento' : 'Planta do imóvel'}</h2></div>
-            ${plantas.length > 1 ? `<span class="pl-qtd">${plantas.length} plantas</span>` : ''}</div>
+            ${plantas.length > 1 ? `<div class="lc-tabs pl-tabs">${plantas.map((x, k) => `<button type="button" class="${k ? '' : 'on'}" data-pl="${k}">Planta ${k + 1}</button>`).join('')}</div>` : ''}</div>
           <div class="pl-lista" id="plLista"></div>
         </section>` : ''}
       </div>
@@ -538,8 +538,8 @@ function abrirImovel(id){
   }
   if (yf){ const fr = yf.querySelector('iframe'); fr.addEventListener('load', () => setTimeout(() => yf.classList.add('on'), 1200), {once: true}); }
   if (plantas.length){
-    // todas as plantas aparecem, uma abaixo da outra, com nomes padronizados (Planta 1, Planta 2…)
-    const nomeP = k => plantas.length > 1 ? `Planta ${k + 1} de ${plantas.length}` : 'Planta do empreendimento';
+    // botões com nomes padronizados (Planta 1, Planta 2…); uma planta por vez
+    const nomeP = k => plantas.length > 1 ? `Planta ${k + 1}` : 'Planta do empreendimento';
     $('#plLista').innerHTML = plantas.map((x, k) => {
       const nome = nomeP(k);
       const img = x.tipo === 'pdf' ? (x.id && !/^demo/.test(x.id) ? 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(x.id) + '&sz=w1600' : '') : x.url;
@@ -552,6 +552,9 @@ function abrirImovel(id){
           ${x.tipo === 'pdf' ? `<a class="btn btn-ghost sm" href="${esc(abrirPdf)}" target="_blank" rel="noopener">Abrir PDF</a>` : '<button type="button" class="btn btn-ghost sm" data-plzoom>Ampliar planta</button>'}
           <button type="button" class="btn btn-gold sm" data-chat="${interesse}">Consultar lotes</button></div></div>`;
     }).join('');
+    const verPlanta = k => $$('#plLista .pl-view').forEach(el => el.hidden = +el.dataset.k !== k);
+    body.querySelectorAll('[data-pl]').forEach(b => b.onclick = () => { body.querySelectorAll('[data-pl]').forEach(o => o.classList.toggle('on', o === b)); verPlanta(+b.dataset.pl); });
+    verPlanta(0);
     $$('#plLista .pl-view').forEach(el => { const k = +el.dataset.k, x = plantas[k], abrirPdf = String(x.url).replace(/\/preview$/, '/view');
       el.querySelectorAll('[data-plzoom]').forEach(b => b.onclick = () => x.tipo === 'pdf' ? window.open(abrirPdf, '_blank', 'noopener') : zoomPlanta(x.url, nomeP(k))); });
   }
