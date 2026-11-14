@@ -953,7 +953,9 @@ function trocarTexto(antigo, novo){
 function aplicarConfig(c){
   if (!c || typeof c !== 'object') return;
   if (c.whatsapp && /^\d{12,13}$/.test(c.whatsapp)) CONFIG.whatsapp = c.whatsapp;
-  if (Array.isArray(c.capa) && c.capa.length) CONFIG.capa = c.capa.filter(v => /^https:\/\//.test(v.src || ''));
+  // lista antiga de vídeos padrão salva no painel não substitui a nova lista padrão
+  const capaAntiga = l => l.every(v => /mixkit\.co\/videos\/(5371|4998|827|42495|43605)\//.test(v.src || ''));
+  if (Array.isArray(c.capa) && c.capa.length && !capaAntiga(c.capa)) CONFIG.capa = c.capa.filter(v => /^https:\/\//.test(v.src || ''));
   if (c.segundosPorClipe) CONFIG.segundosPorClipe = c.segundosPorClipe;
   if (c.videoAtivo === false) CONFIG.videoAtivo = false;
   if (c.whatsappExibir) { trocarTexto(CFG_APLICADA.whatsappExibir, c.whatsappExibir); CFG_APLICADA.whatsappExibir = c.whatsappExibir; }
@@ -1143,8 +1145,8 @@ function iniciar(){
     e.preventDefault(); $('#top').classList.remove('open');
     if (window.GBI_ADMIN) return window.GBI_ADMIN.abrir();
     b.classList.add('loading');
-    const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'admin.css'; document.head.appendChild(css);
-    const js = document.createElement('script'); js.src = 'admin.js';
+    const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'admin.css?v=e80daf9d'; document.head.appendChild(css);
+    const js = document.createElement('script'); js.src = 'admin.js?v=3ddccfc4';
     js.onload = () => { b.classList.remove('loading'); window.GBI_ADMIN && window.GBI_ADMIN.abrir(); };
     js.onerror = () => { b.classList.remove('loading'); alert('Não foi possível abrir o painel. Verifique se os arquivos admin.js e admin.css foram enviados.'); };
     document.body.appendChild(js);
@@ -1332,7 +1334,7 @@ const I18N = (() => {
     ['Praias', 'Beaches', 'Playas'], ['Terrenos com lago', 'Land with lakes', 'Terrenos con lago'], ['Fazendas', 'Farms', 'Haciendas'], ['Litoral', 'Coastline', 'Litoral'], ['Rios e natureza', 'Rivers and nature', 'Ríos y naturaleza'],
     ['Ver as fotos', 'See the photos', 'Ver las fotos'], ['Assistir ao vídeo', 'Watch the video', 'Ver el video'], ['Valor', 'Price', 'Valor'],
     ['Sobre o imóvel', 'About the property', 'Sobre el inmueble'], ['Conheça', 'Discover', 'Conozca'], ['cada detalhe', 'every detail', 'cada detalle'], ['os detalhes', 'the details', 'los detalles'],
-    ['Galeria', 'Gallery', 'Galería'], ['Para alugar', 'For rent', 'En alquiler'], ['Alugado', 'Rented', 'Alquilado'], ['Valor do aluguel', 'Rent', 'Alquiler'], ['Planta do empreendimento', 'Development plan', 'Plano del emprendimiento'], ['Ativar som', 'Sound on', 'Activar sonido'], ['Desativar som', 'Sound off', 'Desactivar sonido'], ['Implantação', 'Site plan', 'Implantación'], ['Planta do loteamento', 'Subdivision plan', 'Plano del loteo'], ['Planta do imóvel', 'Property plan', 'Plano de la propiedad'],
+    ['Galeria', 'Gallery', 'Galería'], ['Gado no pasto', 'Cattle in the pasture', 'Ganado en el pasto'], ['Campos e lavouras', 'Fields and crops', 'Campos y cultivos'], ['Rebanho pastando', 'Grazing herd', 'Rebaño pastando'], ['Para alugar', 'For rent', 'En alquiler'], ['Alugado', 'Rented', 'Alquilado'], ['Valor do aluguel', 'Rent', 'Alquiler'], ['Planta do empreendimento', 'Development plan', 'Plano del emprendimiento'], ['Ativar som', 'Sound on', 'Activar sonido'], ['Desativar som', 'Sound off', 'Desactivar sonido'], ['Implantação', 'Site plan', 'Implantación'], ['Planta do loteamento', 'Subdivision plan', 'Plano del loteo'], ['Planta do imóvel', 'Property plan', 'Plano de la propiedad'],
     ['Toque para ampliar', 'Tap to zoom', 'Toca para ampliar'], ['Toque para abrir o PDF', 'Tap to open the PDF', 'Toca para abrir el PDF'], ['Abrir PDF', 'Open PDF', 'Abrir PDF'],
     ['Ampliar planta', 'Zoom plan', 'Ampliar plano'], ['Consultar lotes', 'Ask about lots', 'Consultar lotes'], ['Documento em PDF', 'PDF document', 'Documento PDF'],
     ['Use o zoom para ver quadras e lotes', 'Zoom in to see blocks and lots', 'Usa el zoom para ver manzanas y lotes'],

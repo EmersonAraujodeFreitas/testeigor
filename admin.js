@@ -732,7 +732,7 @@ async function vConfig(){
   try {
     const c = (await api('configAdm')).config || {};
     CF = Object.assign(JSON.parse(JSON.stringify(CFG_PADRAO)), c);
-    if (!Array.isArray(CF.capa) || !CF.capa.length) CF.capa = JSON.parse(JSON.stringify(CFG_PADRAO.capa));
+    if (!Array.isArray(CF.capa) || !CF.capa.length || CF.capa.every(v => /mixkit\.co\/videos\/(5371|4998|827|42495|43605)\//.test(v.src || ''))) CF.capa = JSON.parse(JSON.stringify(CFG_PADRAO.capa));
     preencherCfg();
   } catch(err){ toast(err.message, 'err'); }
 }
